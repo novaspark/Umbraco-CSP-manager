@@ -8,6 +8,7 @@ using Umbraco.Community.CSPManager.Services;
 public class CSPManagerApiControllerTests
 {
 	private ICspService _cspService;
+	private IScriptItemService _scriptItemService;
 
 	private CSPManagerApiController _sud;
 
@@ -15,7 +16,8 @@ public class CSPManagerApiControllerTests
 	public void SetUp()
 	{
 		_cspService = Mock.Of<ICspService>();
-		_sud = new CSPManagerApiController(_cspService);
+		_scriptItemService = Mock.Of<IScriptItemService>();
+		_sud = new CSPManagerApiController(_cspService, _scriptItemService);
 	}
 
 	[Test]

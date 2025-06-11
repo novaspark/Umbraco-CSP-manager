@@ -1,10 +1,13 @@
 ﻿namespace Umbraco.Community.CSPManager.Composing;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Composing;
+using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Core.Notifications;
+using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Web.Common.ApplicationBuilder;
 using Umbraco.Community.CSPManager.Backoffice;
 using Umbraco.Community.CSPManager.Middleware;
@@ -19,6 +22,7 @@ public sealed class CspManagerComposer : IComposer
 		builder.ManifestFilters().Append<PackageManifestFilter>();
 		builder.AddSection<CspManagementSection>();
 		builder.Services.AddTransient<ICspService, CspService>();
+		builder.Services.AddTransient<IScriptItemService, ScriptItemService>();
 		builder.Services.Configure<UmbracoPipelineOptions>(options =>
 		{
 #if NET8_0_OR_GREATER
@@ -40,6 +44,7 @@ public sealed class CspManagerComposer : IComposer
 				_ => { }));
 		});
 #endif
+		builder.Services.Configure<CspManagerSettings>(builder.Config.GetRequiredSection("CspManager"));
 		builder.AddNotificationHandler<ServerVariablesParsingNotification, ServerVariablesHandler>();
 		builder.AddNotificationHandler<CspSavedNotification, CspSavedNotificationHandler>();
 	}

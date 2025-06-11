@@ -11,8 +11,29 @@
 
 			vm.page = {
 				isBackOffice: $routeParams.id === "1",
+				isScripts: $routeParams.id === "3",
 				loading: true,
-				navigation: [{
+				navigation: getNavigation($routeParams.id)
+			};
+
+			vm.page.name = `Manage ${vm.page.isBackOffice ? "Back Office CSP" : vm.page.isScripts ? "Scripts" : "Front end CSP"}`;
+			getDefinition();
+		}
+
+		function getNavigation(routeId) {
+			if (routeId === "3") {
+				return [{
+					active: true,
+					alias: "edit",
+					icon: "icon-document-dashed-line",
+					name: "Edit",
+					view: "/App_Plugins/CspManager/backoffice/manage-csp/scripts/manage-scripts.html",
+					weight: 0,
+					viewModel: null,
+					badge: null
+				}];
+			} else {
+				return [{
 					active: true,
 					alias: "edit",
 					icon: "icon-document-dashed-line",
@@ -26,16 +47,13 @@
 					active: false,
 					alias: "evaluate",
 					icon: "icon-lense",
-					name:"Evaluate",
+					name: "Evaluate",
 					view: "/App_Plugins/CspManager/backoffice/manage-csp/evaluate/evaluate.html",
 					weight: 1,
 					viewModel: null,
 					badge: null
-				}]
-			};
-
-			vm.page.name = `Manage ${vm.page.isBackOffice ? "Back Office" : "Front end"} CSP`;
-			getDefinition();
+				}];
+			}			
 		}
 
 		function getDefinition() {

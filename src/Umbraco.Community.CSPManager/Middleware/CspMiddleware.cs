@@ -1,32 +1,36 @@
 ﻿namespace Umbraco.Community.CSPManager.Middleware;
 
+using System.Linq;
 using System.Threading.Tasks;
-using Umbraco.Cms.Core;
-using Umbraco.Cms.Core.Services;
 using Microsoft.AspNetCore.Http;
-using Umbraco.Community.CSPManager.Services;
+using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Events;
-using Umbraco.Community.CSPManager.Notifications;
-using Umbraco.Extensions;
-using Umbraco.Community.CSPManager.Models;
+using Umbraco.Cms.Core.Services;
 using Umbraco.Community.CSPManager.Extensions;
+using Umbraco.Community.CSPManager.Models;
+using Umbraco.Community.CSPManager.Notifications;
+using Umbraco.Community.CSPManager.Services;
+using Umbraco.Extensions;
 
 public class CspMiddleware
 {
 	private readonly RequestDelegate _next;
 	private readonly IRuntimeState _runtimeState;
 	private readonly ICspService _cspService;
+	private readonly IScriptItemService _scriptItemService;
 	private readonly IEventAggregator _eventAggregator;
 
 	public CspMiddleware(
 		RequestDelegate next,
 		IRuntimeState runtimeState,
 		ICspService cspService,
+		IScriptItemService scriptItemService,
 		IEventAggregator eventAggregator)
 	{
 		_next = next;
 		_runtimeState = runtimeState;
 		_cspService = cspService;
+		_scriptItemService = scriptItemService;
 		_eventAggregator = eventAggregator;
 	}
 
@@ -38,7 +42,7 @@ public class CspMiddleware
 			return;
 		}
 
-		context.Response.OnStarting( async () =>
+		context.Response.OnStarting(async () =>
 		{
 			var definition = _cspService.GetCachedCspDefinition(context.Request.IsBackOfficeRequest());
 
@@ -46,7 +50,7 @@ public class CspMiddleware
 
 			if (definition is not { Enabled: true })
 			{
-				
+
 				return;
 			}
 
@@ -57,7 +61,13 @@ public class CspMiddleware
 			{
 				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, cspValue);
 			}
-		});	
+
+			var scriptHashes = await GetScriptHashes(definition, context);
+			if (scriptHashes!=null)
+			{
+				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, $"{CspConstants.Directives.ScriptSource} {scriptHashes}");
+			}
+		});
 
 		await _next(context);
 	}
@@ -99,5 +109,19 @@ public class CspMiddleware
 		}
 
 		return csp;
+	}
+
+	private async Task<string?> GetScriptHashes(CspDefinition definition, HttpContext httpContext)
+	{
+		// Script hashes - add as a separate directive for clarity
+		if (httpContext.GetItem<string>(CspConstants.CspManagerScriptHashSet) == "set")
+		{
+			var hashes = await _scriptItemService.GetCachedScriptItemsDictionary();
+			if (hashes != null)
+			{
+				return string.Join(' ', hashes.Select(x => $"'{x.Value}'"));
+			}
+		}
+		return null;
 	}
 }

@@ -13,6 +13,7 @@ internal sealed class PackageManifestFilter : IManifestFilter
 				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/cspManagerEditController.js",
 				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/cspManager.resource.js",
 				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/manage/cspManagerManageController.js",
+				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/scripts/cspScriptManageController.js",
 				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/evaluate/cspManagerEvaluateController.js",
 				$"/App_Plugins/{CspConstants.PluginAlias}/backoffice/manage-csp/evaluate/csp-evaluator.js"
 			},

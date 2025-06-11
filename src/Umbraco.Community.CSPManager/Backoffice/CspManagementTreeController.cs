@@ -28,7 +28,8 @@ public sealed class CspManagementTreeController : TreeController
 		return new TreeNodeCollection
 		{
 			CreateTreeNode("1", "-1", queryStrings, "Back Office", "icon-umbraco blue", false),
-			CreateTreeNode("2", "-1", queryStrings, "Front end", "icon-globe blue", false)
+			CreateTreeNode("2", "-1", queryStrings, "Front end", "icon-globe blue", false),
+			CreateTreeNode("3", "-1", queryStrings, "Scripts", "icon-script blue", false)
 		};
 	}
 

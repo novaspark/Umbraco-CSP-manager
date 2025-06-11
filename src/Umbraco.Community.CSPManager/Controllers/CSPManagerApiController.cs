@@ -11,10 +11,12 @@ using Umbraco.Community.CSPManager.Services;
 public sealed class CSPManagerApiController : UmbracoAuthorizedJsonController
 {
 	private readonly ICspService _cspService;
+	private readonly IScriptItemService _scriptItemService;
 
-	public CSPManagerApiController(ICspService cspService)
+	public CSPManagerApiController(ICspService cspService, IScriptItemService scriptItemService)
 	{
 		_cspService = cspService;
+		_scriptItemService = scriptItemService;
 	}
 
 	[HttpGet]
@@ -34,5 +36,41 @@ public sealed class CSPManagerApiController : UmbracoAuthorizedJsonController
 		}
 
 		return await _cspService.SaveCspDefinitionAsync(definition);
+	}
+
+	[HttpGet]
+	public async Task<IList<ScriptItem>> SearchScriptItems()
+	{
+		return await _scriptItemService.FindAllScriptItems();
+	}
+
+
+	[HttpGet]
+	public async Task<IList<ScriptItem>> GetSavedScriptItems()
+	{
+		return await _scriptItemService.GetSavedScriptItems();
+	}
+
+	[HttpPost]
+	public async Task<ScriptItem> AddScriptItem(ScriptItem scriptItem)
+	{
+		if (scriptItem.Id == Guid.Empty)
+		{
+			throw new ArgumentOutOfRangeException(nameof(scriptItem), "ScriptItem Id is blank");
+		}
+
+		return await _scriptItemService.Add(scriptItem);
+	}
+
+	[HttpPost]
+	public async Task<ScriptItem> UpdateScriptItem(UpdateModel model)
+	{
+		return await _scriptItemService.Update(model.Id, model.Description);
+	}
+
+	[HttpPost]
+	public async Task DeleteScriptItem(UpdateModel model)
+	{
+		await _scriptItemService.Delete(model.Id);
 	}
 }

@@ -34,6 +34,62 @@ function resource($http, umbRequestHelper)
 				"Failed to retrieve CSP Directive options"
 			);
 		},
+		searchScriptItems: function () {
+			return umbRequestHelper.resourcePromise(
+				$http.get(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"SearchScriptItems"
+					)),
+				"Failed to search Script Items"
+			);
+		},
+		getSavedScriptItems: function () {
+			return umbRequestHelper.resourcePromise(
+				$http.get(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"GetSavedScriptItems"
+					)),
+				"Failed to get saved Script Items"
+			);
+		},
+		addScriptItem: function (scriptItem) {
+			return umbRequestHelper.resourcePromise(
+				$http.post(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"AddScriptItem"
+					),
+					scriptItem
+				),
+				"Failed to add Script Item for CSP Manager"
+			);
+		},
+		updateScriptItem: function (id, description) {
+			return umbRequestHelper.resourcePromise(
+				$http.post(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"UpdateScriptItem"
+					),
+					{id:id, description:description}
+				),
+				"Failed to update Script Item for CSP Manager"
+			);
+		},
+		deleteScriptItem: function (id) {
+			return umbRequestHelper.resourcePromise(
+				$http.post(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"DeleteScriptItem"
+					),
+					{ id: id }
+				),
+				"Failed to update Script Item for CSP Manager"
+			);
+		},
 	}
 }
 angular.module("umbraco.resources").factory("cspManagerResource", resource);	
