@@ -57,6 +57,7 @@
         function add(scriptItem) {
             cspManagerResource.addScriptItem(scriptItem).then(function (result) {
                 discover();
+                init();
             }, function (error) {
                 console.warn(error);
                 notificationsService.error('Error', 'Failed to add script item');

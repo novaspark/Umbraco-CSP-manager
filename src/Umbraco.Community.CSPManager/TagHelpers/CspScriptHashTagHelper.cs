@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -17,7 +18,8 @@ public class CspScriptHashTagHelper : TagHelper
 {
 	private const string ScriptTag = "script";
 	private const string CspHashAttributeName = "csp-manager-add-hash";
-	
+	private const string CspAddVersionAttributeName = "csp-manager-add-version-qs";
+
 	private readonly IScriptItemService _scriptItemService;
 	private readonly ILogger<CspScriptHashTagHelper> _logger;
 
@@ -29,6 +31,9 @@ public class CspScriptHashTagHelper : TagHelper
 
 	[HtmlAttributeName(CspHashAttributeName)]
 	public bool UseCspHash { get; set; }
+
+	[HtmlAttributeName(CspAddVersionAttributeName)]
+	public bool AddVersionQueryString { get; set; }
 
 	[HtmlAttributeNotBound, ViewContext]
 	public ViewContext ViewContext { get; set; } = null!;
@@ -64,7 +69,14 @@ public class CspScriptHashTagHelper : TagHelper
 				{
 					httpContext.SetItem(CspConstants.CspManagerScriptHashSet, "set");
 				}
-			}			
+			}
+
+			if (AddVersionQueryString)
+			{
+				var av = Assembly.GetExecutingAssembly().GetName()?.Version?.ToString();
+				output.Attributes.RemoveAll("src");
+				output.Attributes.Add(new TagHelperAttribute("src", src + (src.Contains('?') ? "&" : "?") + "v=" + av));
+			}
 		}
 		else
 		{

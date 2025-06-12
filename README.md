@@ -12,6 +12,18 @@ Enables you to manage Content Security Policy (CSP) for both the front and back 
 dotnet add package Umbraco.Community.CSPManager
 ```
 
+## Settings
+A new section needs to be added to AppSettings.json to set the hash algorithm and the site URL.
+The site URL is used to retreive scripts that don't have absolute URLs.
+```json
+{
+   "CspManager": {
+    "SiteUrl": "https://localhost:44352/",
+    "HashAlgorithm": "sha512"
+  }
+}
+```
+
 ## CSP Management
 ![CSP Management section](https://raw.githubusercontent.com/Matthew-Wise/Umbraco-CSP-manager/main/images/managment-screen.png "Csp Management section")
 
@@ -22,6 +34,11 @@ dotnet add package Umbraco.Community.CSPManager
 ![CSP Evaluation section](https://raw.githubusercontent.com/Matthew-Wise/Umbraco-CSP-manager/main/images/evaluate-screen.png "Csp Evaluation section")
 
 You will also need to give access via the users section to the CSP Manager section.
+
+## Script hashes
+
+The "Scripts" section allows you to add script hashes to the CSP header. Discover all site scripts using the Discover tab / button and then add each relevant script.
+Added scripts can be given a Description for auditing purposes and/or updated to regenerate the hash.
 
 ## Nonce Tag Helper
 
@@ -46,3 +63,5 @@ If you need to access the nonce within a data attribute you can  use the followi
 ```
 csp-manager-add-nonce-data-attribute="true"
 ```
+
+To add script hashes to the CSP header, you can use the `csp-manager-add-script-hash="true"` tag helper on your `<script>` tags.

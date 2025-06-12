@@ -1,92 +1,93 @@
 ﻿<ng-form val-form-manager class="form-horizontal" ng-controller="cspScriptManageController as vm">
-	<div class="umb-editor-tab-bar">
-		<umb-tabs-nav tabs="vm.tabs"
-					  on-tab-change="vm.changeTab(tab)">
-		</umb-tabs-nav>
-	</div>
-	<umb-tab-content ng-if="vm.tab === 'scripts'">
-		<uui-box ng-if="!vm.loading" headline="Saved scripts" class="umb-group-panel">
-			<div class="umb-group-panel__content">
-				<div ng-repeat="(sourceIndex, script) in vm.savedScripts" class="mb2">
-					<button type="button" class="csp-accordion-btn" ng-class="{'active': vm.expanded.includes(sourceIndex) ? true : false}" ng-click="vm.expandAccordion($event, sourceIndex)">
-						<span>
-							Script: {{script.Src}}<br />
-							<span class="csp-subtitle"><b>Location:</b> {{script.FileLocation}}</span>
-						</span>
-						<span class="ml-auto">
-							<uui-symbol-expand ng-attr-open="{{vm.expanded.includes(sourceIndex) ? true : undefined}}"></uui-symbol-expand>
-						</span>
-					</button>
-					<div class="csp-accordion" ng-class="{'show': vm.expanded.includes(sourceIndex) ? true : false}">
-						<div class="control-group umb-control-group">
-							<div class="umb-el-wrap">
-								<div class="control-header">
-									<label class="control-label" for="description-{{sourceIndex}}">Description</label>
-								</div>
-								<div class="controls">
-									<input id="description-{{sourceIndex}}" type="text" ng-model="vm.savedScripts[sourceIndex].Description" class="umb-property-editor umb-textstring textstring" />
-								</div>
-							</div>
-						</div>
-						<div class="control-group umb-control-group">
-							<div class="umb-el-wrap">
-								<div class="control-header">
-									<label class="control-label">Hash</label>
-								</div>
-								<div class="controls">
-									<textarea readonly style="font-family:'Courier New'; font-weight:normal; width:100%">{{vm.savedScripts[sourceIndex].Hash}}</textarea>
-								</div>
-							</div>
-						</div>
-						<div class="control-group umb-control-group">
-							<div class="umb-el-wrap">
-								<div class="control-header">
-									<label class="control-label">Last updated</label>
-								</div>
-								<div class="controls">
-									<span style="font-weight:normal">{{vm.savedScripts[sourceIndex].LastUpdated | date:'dd/MM/yyyy HH:mm:ss'}}</span>
-								</div>
-							</div>
-						</div>
-						<div class="control-group umb-control-group">
-							<div class="umb-el-wrap">
-								<div class="control-header">
-								</div>
-								<div class="controls" style="text-align:right;">
-									<uui-button look="secondary" color="danger" type="button" label="Delete" ng-click="vm.delete(sourceIndex)" class="mt3 mr2"></uui-button>
-									<uui-button look="primary" color="positive" type="button" label="Update" ng-click="vm.update(sourceIndex)" class="mt3"></uui-button>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</uui-box>
-	</umb-tab-content>
-	<umb-tab-content ng-if="vm.tab === 'discover'">
-		<uui-box headline="Discover" class="umb-group-panel">
-			<table ng-if="vm.scripts.length>0" style="width:100%;">
-				<thead>
-					<tr style="text-align:left;">
-						<th>View</th>
-						<th>Src</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr ng-repeat="(index, script) in vm.scripts" class="mb2">
-						<td>{{script.FileLocation
-										}} ({{script.Position}})</td>
-<td>{{script.Src}}</td>
-						<td><uui-button look="outline" color="default" type="button" label="Add" ng-click="vm.add(script)"></uui-button></td>
-					</tr>
-				</tbody>
-			</table>
+    <div class="umb-editor-tab-bar">
+        <umb-tabs-nav tabs="vm.tabs"
+                      on-tab-change="vm.changeTab(tab)">
+        </umb-tabs-nav>
+    </div>
+    <umb-tab-content ng-if="vm.tab === 'scripts'">
+        <uui-box ng-if="!vm.loading" headline="Saved scripts" class="umb-group-panel">
+            <div class="umb-group-panel__content">
+                <div ng-repeat="(sourceIndex, script) in vm.savedScripts" class="mb2">
+                    <button type="button" class="csp-accordion-btn" ng-class="{'active': vm.expanded.includes(sourceIndex) ? true : false}" ng-click="vm.expandAccordion($event, sourceIndex)">
+                        <span>
+                            Script: {{script.Src}}<br />
+                            <span class="csp-subtitle"><b>Location:</b> {{script.FileLocation}}</span>
+                        </span>
+                        <span class="ml-auto">
+                            <uui-symbol-expand ng-attr-open="{{vm.expanded.includes(sourceIndex) ? true : undefined}}"></uui-symbol-expand>
+                        </span>
+                    </button>
+                    <div class="csp-accordion" ng-class="{'show': vm.expanded.includes(sourceIndex) ? true : false}">
+                        <div class="control-group umb-control-group">
+                            <div class="umb-el-wrap">
+                                <div class="control-header">
+                                    <label class="control-label" for="description-{{sourceIndex}}">Description</label>
+                                </div>
+                                <div class="controls">
+                                    <input id="description-{{sourceIndex}}" type="text" ng-model="vm.savedScripts[sourceIndex].Description" class="umb-property-editor umb-textstring textstring" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group umb-control-group">
+                            <div class="umb-el-wrap">
+                                <div class="control-header">
+                                    <label class="control-label">Hash</label>
+                                </div>
+                                <div class="controls">
+                                    <textarea readonly style="font-family:'Courier New'; font-weight:normal; width:100%">{{vm.savedScripts[sourceIndex].Hash}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group umb-control-group">
+                            <div class="umb-el-wrap">
+                                <div class="control-header">
+                                    <label class="control-label">Last updated</label>
+                                </div>
+                                <div class="controls">
+                                    <span style="font-weight:normal">{{vm.savedScripts[sourceIndex].LastUpdated | date:'dd/MM/yyyy HH:mm:ss'}}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group umb-control-group">
+                            <div class="umb-el-wrap">
+                                <div class="control-header">
+                                </div>
+                                <div class="controls" style="text-align:right;">
+                                    <uui-button look="secondary" color="danger" type="button" label="Delete" ng-click="vm.delete(sourceIndex)" class="mt3 mr2"></uui-button>
+                                    <uui-button look="primary" color="positive" type="button" label="Update" ng-click="vm.update(sourceIndex)" class="mt3"></uui-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </uui-box>
+    </umb-tab-content>
+    <umb-tab-content ng-if="vm.tab === 'discover'">
+        <uui-box headline="Discover" class="umb-group-panel">
+            <table ng-if="vm.scripts.length>0" style="width:100%;">
+                <thead>
+                    <tr style="text-align:left;">
+                        <th>View</th>
+                        <th>Src</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="(index, script) in vm.scripts" class="mb2">
+                        <td>
+                            {{script.FileLocation}} ({{script.Position}})
+                        </td>
+                        <td style="overflow: hidden; word-break: break-all;" title="{{script.Src}}">{{script.Src}}</td>
+                        <td><uui-button class="ml2" look="outline" color="default" type="button" label="Add" ng-click="vm.add(script)"></uui-button></td>
+                    </tr>
+                </tbody>
+            </table>
 
 
-			<uui-button look="outline" color="default" type="button" label="Discover" ng-click="vm.discover()" class="mt3"></uui-button>
+            <uui-button look="outline" color="default" type="button" label="Discover" ng-click="vm.discover()" class="mt3"></uui-button>
 
-		</uui-box>
-	</umb-tab-content>
+        </uui-box>
+    </umb-tab-content>
 
 </ng-form>

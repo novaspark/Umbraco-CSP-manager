@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -52,13 +53,20 @@ public class ScriptItemService : IScriptItemService
 
 	private async Task<Dictionary<string, string>> GetScriptItemsDictionary()
 	{
+		var d = new Dictionary<string, string>();
 		var allItems = await GetSavedScriptItems();
 		if (allItems != null)
 		{
-			return allItems.ToDictionary(x => x.Src ?? "NOTSET", x => x.Hash ?? "NOTSET");
+			foreach (var item in allItems)
+			{
+				if (item.Src!=null && !d.ContainsKey(item.Src))
+				{
+					d.Add(item.Src, item.Hash ?? "NOTSET");
+				}
+			}
 		}
 
-		return new Dictionary<string, string>();
+		return d;
 	}
 
 	public async Task<IList<ScriptItem>> FindAllScriptItems()
@@ -177,6 +185,11 @@ public class ScriptItemService : IScriptItemService
 	{
 		// Download contents of script file and generate hash
 		// Is it a full path?
+		if (src.StartsWith("//"))
+		{
+			src = "https:" + src; // Handle protocol-relative URLs
+		}
+
 		if (!src.StartsWith("http"))
 		{
 			src = siteRoot.TrimEnd('/') + "/" + src.TrimStart('/');
