@@ -47,5 +47,6 @@ public sealed class CspManagerComposer : IComposer
 		builder.Services.Configure<CspManagerSettings>(builder.Config.GetRequiredSection("CspManager"));
 		builder.AddNotificationHandler<ServerVariablesParsingNotification, ServerVariablesHandler>();
 		builder.AddNotificationHandler<CspSavedNotification, CspSavedNotificationHandler>();
+		builder.AddNotificationHandler<UmbracoApplicationStartedNotification, CspApplicationStartedNotificationHandler>();
 	}
 }

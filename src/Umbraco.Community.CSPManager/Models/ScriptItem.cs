@@ -20,6 +20,8 @@ public class ScriptItem
 
 	public string? Hash { get; set; }
 
+	public bool? SynchroniseOnStartup { get; set; }
+
 	public DateTime? LastUpdated { get; set; }
 }
 
@@ -27,4 +29,6 @@ public class UpdateModel
 {
 	public Guid Id { get; set; }
 	public string? Description { get; set; }
+
+	public bool? SynchroniseOnStartup { get; set; }
 }

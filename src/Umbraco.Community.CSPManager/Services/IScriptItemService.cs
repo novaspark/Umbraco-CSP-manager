@@ -13,6 +13,7 @@ public interface IScriptItemService
 	Task<IList<ScriptItem>> FindAllScriptItems();
 	Task<ScriptItem> Add(ScriptItem item);
 	Task<IList<ScriptItem>> GetSavedScriptItems();
-	Task<ScriptItem> Update(Guid id, string description);
+	Task<ScriptItem> Update(Guid id, string description, bool? synchroniseOnStartup);
 	Task Delete(Guid id);
+	Task ReSyncScriptItems();
 }

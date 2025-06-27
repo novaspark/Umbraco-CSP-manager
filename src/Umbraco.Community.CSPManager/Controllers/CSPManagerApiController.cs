@@ -65,7 +65,7 @@ public sealed class CSPManagerApiController : UmbracoAuthorizedJsonController
 	[HttpPost]
 	public async Task<ScriptItem> UpdateScriptItem(UpdateModel model)
 	{
-		return await _scriptItemService.Update(model.Id, model.Description);
+		return await _scriptItemService.Update(model.Id, model.Description, model.SynchroniseOnStartup);
 	}
 
 	[HttpPost]

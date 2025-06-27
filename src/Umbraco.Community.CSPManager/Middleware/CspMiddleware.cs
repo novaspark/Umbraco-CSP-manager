@@ -60,7 +60,7 @@ public class CspMiddleware
 
 			if (!string.IsNullOrEmpty(cspValue))
 			{
-				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, cspValue);
+				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, cspValue + ";");
 			}
 
 			

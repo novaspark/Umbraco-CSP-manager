@@ -121,6 +121,23 @@ public class ScriptItemService : IScriptItemService
 		return await scope.Database.FetchAsync<ScriptItem>();
 	}
 
+	public async Task ReSyncScriptItems()
+	{
+		using var scope = _scopeProvider.CreateScope();
+		var allItems = await scope.Database.FetchAsync<ScriptItem>();
+		
+		foreach (var item in allItems.Where(x=>x.SynchroniseOnStartup.GetValueOrDefault()))
+		{
+			item.Hash = await GenerateHash(item.Src, _settings.SiteUrl);
+			item.LastUpdated = DateTime.UtcNow;
+			await scope.Database.SaveAsync(item);
+		}
+
+		scope.Complete();
+
+		_runtimeCache.ClearByKey(_CACHE_KEY);
+	}
+
 	public async Task<ScriptItem> Add(ScriptItem item)
 	{
 		item.Hash = await GenerateHash(item.Src, _settings.SiteUrl);
@@ -134,7 +151,7 @@ public class ScriptItemService : IScriptItemService
 		return item;
 	}
 
-	public async Task<ScriptItem> Update(Guid id, string description)
+	public async Task<ScriptItem> Update(Guid id, string description, bool? synchroniseOnStartup)
 	{
 		using var scope = _scopeProvider.CreateScope();
 		var sql = scope.SqlContext.Sql()
@@ -150,6 +167,7 @@ public class ScriptItemService : IScriptItemService
 			scriptItem.Hash = await GenerateHash(scriptItem.Src, _settings.SiteUrl);
 			scriptItem.LastUpdated = DateTime.Now;
 			scriptItem.Description = description;
+			scriptItem.SynchroniseOnStartup = synchroniseOnStartup;
 
 			await scope.Database.SaveAsync(scriptItem);
 

@@ -1,4 +1,10 @@
-﻿<ng-form val-form-manager class="form-horizontal" ng-controller="cspScriptManageController as vm">
+﻿<style>
+    label.checkbox span.umb-form-check__text {
+        font-size:14px;
+        font-style:italic;
+    }
+</style>
+<ng-form val-form-manager class="form-horizontal" ng-controller="cspScriptManageController as vm">
     <div class="umb-editor-tab-bar">
         <umb-tabs-nav tabs="vm.tabs"
                       on-tab-change="vm.changeTab(tab)">
@@ -25,6 +31,17 @@
                                 </div>
                                 <div class="controls">
                                     <input id="description-{{sourceIndex}}" type="text" ng-model="vm.savedScripts[sourceIndex].Description" class="umb-property-editor umb-textstring textstring" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group umb-control-group">
+                            <div class="umb-el-wrap">
+                                <div class="control-header">
+                                    <label class="control-label" for="sync-{{sourceIndex}}">Synchronise on startup</label>
+                                </div>
+                                <div class="controls">
+                                    
+                                    <umb-checkbox id="sync-{{sourceIndex}}" type="checkbox" text="This will regenerate the hash on site startup and synchronise with the CSP" value="{{vm.savedScripts[sourceIndex].SynchroniseOnStartup}}" model="vm.savedScripts[sourceIndex].SynchroniseOnStartup"></umb-checkbox>
                                 </div>
                             </div>
                         </div>

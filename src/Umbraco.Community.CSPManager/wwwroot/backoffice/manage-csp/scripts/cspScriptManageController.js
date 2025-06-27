@@ -67,7 +67,7 @@
         function update(index) {
             const si = vm.savedScripts[index];
 
-            cspManagerResource.updateScriptItem(si.Id, si.Description).then(function (result) {
+            cspManagerResource.updateScriptItem(si.Id, si.Description, si.SynchroniseOnStartup).then(function (result) {
                 vm.savedScripts[index].LastUpdated = result.LastUpdated;
                 vm.savedScripts[index].Hash = result.Hash;
             }, function (error) {

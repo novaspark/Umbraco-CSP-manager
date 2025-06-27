@@ -66,14 +66,14 @@ function resource($http, umbRequestHelper)
 				"Failed to add Script Item for CSP Manager"
 			);
 		},
-		updateScriptItem: function (id, description) {
+		updateScriptItem: function (id, description, sync) {
 			return umbRequestHelper.resourcePromise(
 				$http.post(
 					umbRequestHelper.getApiUrl(
 						"cspManagerBaseUrl",
 						"UpdateScriptItem"
 					),
-					{id:id, description:description}
+					{id:id, description:description, synchroniseOnStartup:sync}
 				),
 				"Failed to update Script Item for CSP Manager"
 			);
