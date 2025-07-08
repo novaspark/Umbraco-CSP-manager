@@ -181,6 +181,34 @@ public class ScriptItemService : IScriptItemService
 		return null;	
 	}
 
+	public async Task<ScriptItem> UpdateHash(Guid id, string hash)
+	{
+		using var scope = _scopeProvider.CreateScope();
+		var sql = scope.SqlContext.Sql()
+			.SelectAll()
+			.From<ScriptItem>()
+			.Where<ScriptItem>(x => x.Id == id);
+
+		var si = await scope.Database.FetchAsync<ScriptItem>(sql);
+		var scriptItem = si.FirstOrDefault();
+
+		if (scriptItem != null)
+		{
+			scriptItem.Hash = hash;
+			scriptItem.LastUpdated = DateTime.Now;
+
+			await scope.Database.SaveAsync(scriptItem);
+
+			scope.Complete();
+
+			_runtimeCache.ClearByKey(_CACHE_KEY);
+
+			return scriptItem;
+		}
+
+		return null;
+	}
+
 	public async Task Delete(Guid id)
 	{
 		using var scope = _scopeProvider.CreateScope();
@@ -215,7 +243,7 @@ public class ScriptItemService : IScriptItemService
 
 		using (var httpClient = new HttpClient())
 		{
-			var result = await httpClient.GetStringAsync(src);
+			var result = await httpClient.GetByteArrayAsync(src);
 			switch (_settings.HashAlgorithm.ToLowerInvariant())
 			{
 				case "sha384":
@@ -230,21 +258,21 @@ public class ScriptItemService : IScriptItemService
 		}
 	}
 
-	private static string Sha256(string input)
+	private static string Sha256(byte[] input)
 	{
-		byte[] crypto = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+		byte[] crypto = SHA256.HashData(input);
 		return $"sha256-{Convert.ToBase64String(crypto)}";
 	}
 
-	private static string Sha384(string input)
+	private static string Sha384(byte[] input)
 	{
-		byte[] crypto = SHA384.HashData(Encoding.UTF8.GetBytes(input));
+		byte[] crypto = SHA384.HashData(input);
 		return $"sha384-{Convert.ToBase64String(crypto)}";
 	}
 
-	private static string Sha512(string input)
+	private static string Sha512(byte[] input)
 	{
-		byte[] crypto = SHA512.HashData(Encoding.UTF8.GetBytes(input));
+		byte[] crypto = SHA512.HashData(input);
 		return $"sha512-{Convert.ToBase64String(crypto)}";
 	}
 }

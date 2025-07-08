@@ -14,6 +14,7 @@ public interface IScriptItemService
 	Task<ScriptItem> Add(ScriptItem item);
 	Task<IList<ScriptItem>> GetSavedScriptItems();
 	Task<ScriptItem> Update(Guid id, string description, bool? synchroniseOnStartup);
+	Task<ScriptItem> UpdateHash(Guid id, string hash);
 	Task Delete(Guid id);
 	Task ReSyncScriptItems();
 }

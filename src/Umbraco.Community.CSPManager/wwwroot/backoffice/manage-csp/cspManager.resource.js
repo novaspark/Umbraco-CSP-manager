@@ -78,6 +78,18 @@ function resource($http, umbRequestHelper)
 				"Failed to update Script Item for CSP Manager"
 			);
 		},
+		setHash: function (id, hash) {
+			return umbRequestHelper.resourcePromise(
+				$http.post(
+					umbRequestHelper.getApiUrl(
+						"cspManagerBaseUrl",
+						"UpdateScriptItemHash"
+					),
+					{ id: id, hash: hash }
+				),
+				"Failed to update Script Item Hash for CSP Manager"
+			);
+		},
 		deleteScriptItem: function (id) {
 			return umbRequestHelper.resourcePromise(
 				$http.post(

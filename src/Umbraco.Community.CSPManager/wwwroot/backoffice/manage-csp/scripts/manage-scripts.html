@@ -40,7 +40,6 @@
                                     <label class="control-label" for="sync-{{sourceIndex}}">Synchronise on startup</label>
                                 </div>
                                 <div class="controls">
-                                    
                                     <umb-checkbox id="sync-{{sourceIndex}}" type="checkbox" text="This will regenerate the hash on site startup and synchronise with the CSP" value="{{vm.savedScripts[sourceIndex].SynchroniseOnStartup}}" model="vm.savedScripts[sourceIndex].SynchroniseOnStartup"></umb-checkbox>
                                 </div>
                             </div>
@@ -48,10 +47,11 @@
                         <div class="control-group umb-control-group">
                             <div class="umb-el-wrap">
                                 <div class="control-header">
-                                    <label class="control-label">Hash</label>
+                                    <label class="control-label" for="hash-{{sourceIndex}}">Hash</label>
                                 </div>
                                 <div class="controls">
-                                    <textarea readonly style="font-family:'Courier New'; font-weight:normal; width:100%">{{vm.savedScripts[sourceIndex].Hash}}</textarea>
+                                    <textarea id="hash-{{sourceIndex}}" ng-model="vm.savedScripts[sourceIndex].Hash" style="font-family:'Courier New'; font-weight:normal; width:100%">{{vm.savedScripts[sourceIndex].Hash}}</textarea>
+                                    <uui-button look="primary" color="positive" type="button" label="Update" ng-click="vm.updateHash(sourceIndex)" class="mt1"></uui-button>
                                 </div>
                             </div>
                         </div>

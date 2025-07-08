@@ -6,8 +6,9 @@
         vm.definition = $scope.model;
         vm.discover = discover;
         vm.add = function (si) { add(si); };
-        vm.update = function (si) { update(si); };;
-        vm.delete = function (si) { deleteItem(si); };;
+        vm.update = function (si) { update(si); };
+        vm.delete = function (si) { deleteItem(si); };
+        vm.updateHash = function (si) { setHash(si); };
         vm.savedScripts = [];
         vm.scripts = [];
         vm.tabs = [{
@@ -74,6 +75,18 @@
                 console.warn(error);
                 notificationsService.error('Error', 'Failed to update script item');
             }); 
+        }
+
+        function setHash(index) {
+            const si = vm.savedScripts[index];
+
+            cspManagerResource.setHash(si.Id, si.Hash).then(function (result) {
+                vm.savedScripts[index].LastUpdated = result.LastUpdated;
+                vm.savedScripts[index].Hash = result.Hash;
+            }, function (error) {
+                console.warn(error);
+                notificationsService.error('Error', 'Failed to update script item hash');
+            });
         }
 
         function deleteItem(index) {
