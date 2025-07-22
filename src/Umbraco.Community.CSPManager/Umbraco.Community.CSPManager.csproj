@@ -11,7 +11,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<AssemblyVersion>2.3.4</AssemblyVersion>
+		<AssemblyVersion>2.3.7</AssemblyVersion>
 		<Product>Umbraco.Community.CSPManager</Product>
 		<PackageId>Umbraco.Community.CSPManager</PackageId>
 		<Title>Umbraco.Community.CSPManager</Title>

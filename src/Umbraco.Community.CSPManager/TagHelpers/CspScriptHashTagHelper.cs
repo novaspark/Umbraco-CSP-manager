@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Umbraco.Community.CSPManager.Extensions;
 using Umbraco.Community.CSPManager.Services;
 
-[HtmlTargetElement(ScriptTag, Attributes = CspHashAttributeName)]
+[HtmlTargetElement(ScriptTag, Attributes = "csp-manager-*")]
 public class CspScriptHashTagHelper : TagHelper
 {
 	private const string ScriptTag = "script";
@@ -40,9 +40,9 @@ public class CspScriptHashTagHelper : TagHelper
 
 	public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
 	{
-		if (!UseCspHash)
+		if (!UseCspHash && !AddVersionQueryString)
 		{
-			return;
+			return; 
 		}
 
 		if (output.TagName == ScriptTag)
@@ -53,23 +53,27 @@ public class CspScriptHashTagHelper : TagHelper
 				_logger.LogWarning("CSP Hash used on a script tag without a src attribute");
 				return;
 			}
-			var hash = await _scriptItemService.GetHash(src);
-			if (hash != null)
-			{
-				output.Attributes.Add(new TagHelperAttribute("integrity", hash));
-				var co = output.Attributes.FirstOrDefault(a => a.Name.Equals("crossorigin", StringComparison.OrdinalIgnoreCase))?.Value?.ToString();
-				if (co==null)
-				{
-					//TODO: Should we check for non-local script files?
-					output.Attributes.Add(new TagHelperAttribute("crossorigin", "anonymous"));
-				}
 
-				var httpContext = ViewContext.HttpContext;
-				if (string.IsNullOrEmpty(httpContext.GetItem<string>(CspConstants.CspManagerScriptHashSet)))
+			if (UseCspHash) 
+			{
+				var hash = await _scriptItemService.GetHash(src);
+				if (hash != null)
 				{
-					httpContext.SetItem(CspConstants.CspManagerScriptHashSet, "set");
+					output.Attributes.Add(new TagHelperAttribute("integrity", hash));
+					var co = output.Attributes.FirstOrDefault(a => a.Name.Equals("crossorigin", StringComparison.OrdinalIgnoreCase))?.Value?.ToString();
+					if (co == null)
+					{
+						//TODO: Should we check for non-local script files?
+						output.Attributes.Add(new TagHelperAttribute("crossorigin", "anonymous"));
+					}
+
+					var httpContext = ViewContext.HttpContext;
+					if (string.IsNullOrEmpty(httpContext.GetItem<string>(CspConstants.CspManagerScriptHashSet)))
+					{
+						httpContext.SetItem(CspConstants.CspManagerScriptHashSet, "set");
+					}
 				}
-			}
+			}			
 
 			if (AddVersionQueryString)
 			{
