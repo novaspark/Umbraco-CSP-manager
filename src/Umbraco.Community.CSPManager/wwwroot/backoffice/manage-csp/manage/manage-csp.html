@@ -114,7 +114,8 @@
 				<div class="control-group umb-control-group">
 					<div class="umb-property">
 						<h4>Reporting</h4>
-						<p>Report-Uri is deprecated in favour of report-to for CSP 3 -
+						<p>
+							Report-Uri is deprecated in favour of report-to for CSP 3 -
 							<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/report-to">Mozilla documentation</a>
 						</p>
 					</div>
@@ -131,7 +132,7 @@
 								<uui-radio value="{{directive.value}}"
 										   ng-on-change="vm.changeReporting(directive.value)"
 										   ng-checked="directive.value == vm.definition.ReportingDirective"
-										   ng-repeat="(index, directive) in vm.reportingDirectives" 
+										   ng-repeat="(index, directive) in vm.reportingDirectives"
 										   label="{{directive.label}}"></uui-radio>
 							</uui-radio-group>
 						</div>
@@ -144,6 +145,26 @@
 						</div>
 						<div class="controls">
 							<input type="text" id="report-value" ng-model="vm.definition.ReportUri" class="umb-property-editor umb-textstring textstring" />
+						</div>
+					</div>
+				</div>
+
+				<div class="control-group umb-control-group">
+					<div class="umb-property">
+						<h4>Exclusions</h4>
+						<p>
+							Add paths to this list separated with commas to disable all CSP headers for requests matching the path.  e.g. /donate/ <br />
+							Note, paths are case insensitive and should start and end with a forward slash.  Child paths are not automatically included.
+						</p>
+					</div>
+				</div>
+				<div class="control-group umb-control-group">
+					<div class="umb-property">
+						<div class="control-header">
+							<label class="control-label" for="csp-exclude">Exclusions</label>
+						</div>
+						<div class="controls">
+							<textarea rows="4" id="csp-exclude" ng-model="vm.definition.ExcludePaths" class="umb-property-editor umb-textstring textstring"></textarea>
 						</div>
 					</div>
 				</div>

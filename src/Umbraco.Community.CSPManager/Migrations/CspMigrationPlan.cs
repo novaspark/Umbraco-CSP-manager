@@ -16,5 +16,6 @@ public sealed class CspMigrationPlan : PackageMigrationPlan
 		To<MaxSourceLengthMigration>(MaxSourceLengthMigration.MigrationKey);
 		To<InitialScriptItemMigration>(InitialScriptItemMigration.MigrationKey);
 		To<ScriptItemAddSyncMigration>(ScriptItemAddSyncMigration.MigrationKey);
+		To<DefinitionAddExcludePathsMigration>(DefinitionAddExcludePathsMigration.MigrationKey);
 	}
 }

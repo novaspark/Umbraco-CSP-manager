@@ -58,11 +58,19 @@ public class CspMiddleware
 			var csp = ConstructCspDictionary(definition, context, scriptHashes);
 			var cspValue = string.Join(";", csp.Select(x => x.Key + " " + x.Value));
 
+			if (definition.ExcludePaths!=null)
+			{
+				var path = context.Request.Path.ToString();
+				if (definition.ExcludePaths.Split(',').Any(p => p.Trim().Equals(path, StringComparison.OrdinalIgnoreCase)))
+				{
+					return;
+				}
+			}
+
 			if (!string.IsNullOrEmpty(cspValue))
 			{
 				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, cspValue + ";");
 			}
-
 			
 		});
 

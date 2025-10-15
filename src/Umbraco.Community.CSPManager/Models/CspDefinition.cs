@@ -22,6 +22,9 @@ public class CspDefinition
 	[Length(500)]
 	public string? ReportUri { get; set; }
 
+	[SpecialDbType(SpecialDbTypes.NVARCHARMAX)]
+	public string? ExcludePaths { get; set; }
+
 	[ResultColumn]
 	[Reference(ReferenceType.Many,
 		ColumnName = nameof(Id),
