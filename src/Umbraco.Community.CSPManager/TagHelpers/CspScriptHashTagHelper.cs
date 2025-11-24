@@ -77,7 +77,7 @@ public class CspScriptHashTagHelper : TagHelper
 
 			if (AddVersionQueryString)
 			{
-				var av = Assembly.GetExecutingAssembly().GetName()?.Version?.ToString();
+				var av = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName()?.Version?.ToString();
 				output.Attributes.RemoveAll("src");
 				output.Attributes.Add(new TagHelperAttribute("src", src + (src.Contains('?') ? "&" : "?") + "v=" + av));
 			}
