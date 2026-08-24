@@ -39,6 +39,13 @@ public interface IScriptItemService
 	/// </summary>
 	Task<ScriptItem> RegenerateHashAsync(Guid id, CancellationToken cancellationToken);
 
+	/// <summary>
+	/// Sets a script item's hash directly to <paramref name="hash"/>, with no download or
+	/// recomputation - for pinning to a value obtained elsewhere (e.g. a vendor's own published
+	/// SRI hash for a CDN-hosted script) rather than trusting a local re-fetch.
+	/// </summary>
+	Task<ScriptItem> SetHashAsync(Guid id, string hash, CancellationToken cancellationToken);
+
 	Task DeleteScriptItemAsync(Guid id, CancellationToken cancellationToken);
 
 	/// <summary>

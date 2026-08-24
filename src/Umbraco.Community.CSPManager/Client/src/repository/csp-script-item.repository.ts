@@ -52,6 +52,23 @@ export class UmbCspScriptItemRepository extends UmbRepositoryBase {
 		return { error };
 	}
 
+	async setHash(id: string, hash: string) {
+		const { data, error } = await tryExecute(
+			this,
+			ScriptItems.postUmbracoCspApiV1ScriptItemsByIdHash({
+				path: { id },
+				body: { hash },
+			}),
+			{ disableNotifications: false }
+		);
+
+		if (data) {
+			return { data };
+		}
+
+		return { error };
+	}
+
 	async delete(id: string) {
 		const { error } = await tryExecute(
 			this,

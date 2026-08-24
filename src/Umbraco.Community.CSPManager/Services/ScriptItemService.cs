@@ -177,6 +177,31 @@ internal sealed class ScriptItemService : IScriptItemService
 		return item;
 	}
 
+	public async Task<ScriptItem> SetHashAsync(Guid id, string hash, CancellationToken cancellationToken)
+	{
+		if (string.IsNullOrWhiteSpace(hash))
+		{
+			throw new ArgumentException("Hash must not be empty.", nameof(hash));
+		}
+
+		var item = await GetScriptItemAsync(id, cancellationToken)
+			?? throw new InvalidOperationException($"Script item {id} does not exist.");
+
+		item.Hash = hash.Trim();
+		item.LastUpdated = DateTime.UtcNow;
+
+		using (var scope = _scopeProvider.CreateScope())
+		{
+			await scope.Database.SaveAsync(item, cancellationToken);
+			scope.Complete();
+		}
+
+		_runtimeCache.ClearByKey(CacheKey);
+		Log.ScriptItemHashSetManually(_logger, item.Id);
+
+		return item;
+	}
+
 	public async Task DeleteScriptItemAsync(Guid id, CancellationToken cancellationToken)
 	{
 		using (var scope = _scopeProvider.CreateScope())

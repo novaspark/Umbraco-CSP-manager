@@ -34,6 +34,12 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 	@state()
 	private _adding = false;
 
+	@state()
+	private _editingHashId: string | null = null;
+
+	@state()
+	private _editingHashValue = '';
+
 	constructor() {
 		super();
 
@@ -117,6 +123,35 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 		this.#clearBusy(item.id);
 	}
 
+	#startEditHash(item: CspApiScriptItem) {
+		this._editingHashId = item.id;
+		this._editingHashValue = item.hash ?? '';
+	}
+
+	#cancelEditHash() {
+		this._editingHashId = null;
+		this._editingHashValue = '';
+	}
+
+	async #handleSetHash(item: CspApiScriptItem) {
+		const hash = this._editingHashValue.trim();
+		if (!hash) return;
+
+		this._busyIds = new Set(this._busyIds).add(item.id);
+
+		const { data, error } = await this.#repository.setHash(item.id, hash);
+
+		if (data) {
+			this._items = this._items.map((i) => (i.id === data.id ? data : i));
+			this.#notify('positive', 'Hash updated', `${data.src} now uses the hash you set.`);
+			this.#cancelEditHash();
+		} else if (error) {
+			this.#notify('danger', 'Failed to set hash', error.message);
+		}
+
+		this.#clearBusy(item.id);
+	}
+
 	async #handleDelete(item: CspApiScriptItem) {
 		try {
 			await umbOpenModal(this, UMB_CONFIRM_MODAL, {
@@ -155,7 +190,8 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 		return html`
 			<uui-box headline="Scripts">
 				<p class="intro">
-					Scripts registered here have a Subresource Integrity hash generated automatically. Add
+					Scripts registered here have a Subresource Integrity hash - generated automatically from the script's own
+					content, or set manually (e.g. to pin a vendor's own published hash for a CDN-hosted script). Add
 					<code>csp-manager-add-hash</code> to a <code>&lt;script&gt;</code> tag with a matching <code>src</code> to
 					stamp its <code>integrity</code> attribute and fold the hash into the <code>script-src</code> directive.
 				</p>
@@ -229,16 +265,13 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 
 	#renderRow(item: CspApiScriptItem) {
 		const busy = this._busyIds.has(item.id);
+		const editingHash = this._editingHashId === item.id;
 
 		return html`
 			<uui-table-row>
 				<uui-table-cell><span class="src">${item.src}</span></uui-table-cell>
 				<uui-table-cell>${item.description || ''}</uui-table-cell>
-				<uui-table-cell>
-					${item.hash
-						? html`<code class="hash" title=${item.hash}>${item.hash}</code>`
-						: html`<span class="no-hash">Not generated</span>`}
-				</uui-table-cell>
+				<uui-table-cell>${editingHash ? this.#renderHashEditor(item) : this.#renderHashDisplay(item)}</uui-table-cell>
 				<uui-table-cell>
 					<uui-toggle
 						label="Synchronise on startup"
@@ -250,9 +283,16 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 				<uui-table-cell>
 					<div class="row-actions">
 						<uui-button
+							label="Set hash manually"
+							compact
+							.disabled=${busy || editingHash}
+							@click=${() => this.#startEditHash(item)}>
+							<uui-icon name="icon-edit"></uui-icon>
+						</uui-button>
+						<uui-button
 							label="Regenerate hash"
 							compact
-							.disabled=${busy}
+							.disabled=${busy || editingHash}
 							@click=${() => this.#handleRegenerate(item)}>
 							<uui-icon name="icon-sync"></uui-icon>
 						</uui-button>
@@ -262,6 +302,39 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 					</div>
 				</uui-table-cell>
 			</uui-table-row>
+		`;
+	}
+
+	#renderHashDisplay(item: CspApiScriptItem) {
+		return item.hash
+			? html`<code class="hash" title=${item.hash}>${item.hash}</code>`
+			: html`<span class="no-hash">Not generated</span>`;
+	}
+
+	#renderHashEditor(item: CspApiScriptItem) {
+		const busy = this._busyIds.has(item.id);
+
+		return html`
+			<div class="hash-editor">
+				<uui-input
+					label="Hash"
+					placeholder="sha384-..."
+					.value=${this._editingHashValue}
+					@input=${(e: Event) => (this._editingHashValue = (e.target as HTMLInputElement).value)}>
+				</uui-input>
+				<div class="hash-editor-actions">
+					<uui-button
+						label="Save hash"
+						compact
+						look="primary"
+						color="positive"
+						.disabled=${busy || !this._editingHashValue.trim()}
+						@click=${() => this.#handleSetHash(item)}>
+						Save
+					</uui-button>
+					<uui-button label="Cancel" compact .disabled=${busy} @click=${() => this.#cancelEditHash()}>Cancel</uui-button>
+				</div>
+			</div>
 		`;
 	}
 
@@ -316,6 +389,23 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 			.no-hash {
 				color: var(--uui-color-text-alt);
 				font-style: italic;
+			}
+
+			.hash-editor {
+				display: flex;
+				flex-direction: column;
+				gap: var(--uui-size-space-2);
+				min-width: 220px;
+			}
+
+			.hash-editor uui-input {
+				font-family: var(--uui-font-family-monospace);
+				font-size: 0.85em;
+			}
+
+			.hash-editor-actions {
+				display: flex;
+				gap: var(--uui-size-space-2);
 			}
 
 			.row-actions {

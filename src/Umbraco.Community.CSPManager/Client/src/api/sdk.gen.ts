@@ -21,6 +21,9 @@ import type {
 	PostUmbracoCspApiV1DefinitionsSaveData,
 	PostUmbracoCspApiV1DefinitionsSaveErrors,
 	PostUmbracoCspApiV1DefinitionsSaveResponses,
+	PostUmbracoCspApiV1ScriptItemsByIdHashData,
+	PostUmbracoCspApiV1ScriptItemsByIdHashErrors,
+	PostUmbracoCspApiV1ScriptItemsByIdHashResponses,
 	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashData,
 	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashErrors,
 	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashResponses,
@@ -137,6 +140,24 @@ export class ScriptItems {
 			security: [{ scheme: 'bearer', type: 'http' }],
 			url: '/umbraco/csp/api/v1/ScriptItems/{id}',
 			...options,
+		});
+	}
+
+	public static postUmbracoCspApiV1ScriptItemsByIdHash<ThrowOnError extends boolean = true>(
+		options: Options<PostUmbracoCspApiV1ScriptItemsByIdHashData, ThrowOnError>,
+	) {
+		return (options.client ?? client).post<
+			PostUmbracoCspApiV1ScriptItemsByIdHashResponses,
+			PostUmbracoCspApiV1ScriptItemsByIdHashErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems/{id}/hash',
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				...options.headers,
+			},
 		});
 	}
 

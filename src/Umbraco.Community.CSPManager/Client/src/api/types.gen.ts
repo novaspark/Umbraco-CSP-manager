@@ -31,6 +31,10 @@ export type CspApiScriptItem = {
 	lastUpdated?: string | null;
 };
 
+export type CspApiSetScriptItemHashRequest = {
+	hash: string;
+};
+
 export type ProblemDetails = {
 	type?: string | null;
 	title?: string | null;
@@ -221,6 +225,47 @@ export type GetUmbracoCspApiV1ScriptItemsByIdResponses = {
 
 export type GetUmbracoCspApiV1ScriptItemsByIdResponse =
 	GetUmbracoCspApiV1ScriptItemsByIdResponses[keyof GetUmbracoCspApiV1ScriptItemsByIdResponses];
+
+export type PostUmbracoCspApiV1ScriptItemsByIdHashData = {
+	body?: CspApiSetScriptItemHashRequest;
+	path: {
+		id: string;
+	};
+	query?: never;
+	url: '/umbraco/csp/api/v1/ScriptItems/{id}/hash';
+};
+
+export type PostUmbracoCspApiV1ScriptItemsByIdHashErrors = {
+	/**
+	 * Bad Request
+	 */
+	400: ProblemDetails;
+	/**
+	 * The resource is protected and requires an authentication token
+	 */
+	401: unknown;
+	/**
+	 * The authenticated user does not have access to this resource
+	 */
+	403: unknown;
+	/**
+	 * Not Found
+	 */
+	404: unknown;
+};
+
+export type PostUmbracoCspApiV1ScriptItemsByIdHashError =
+	PostUmbracoCspApiV1ScriptItemsByIdHashErrors[keyof PostUmbracoCspApiV1ScriptItemsByIdHashErrors];
+
+export type PostUmbracoCspApiV1ScriptItemsByIdHashResponses = {
+	/**
+	 * OK
+	 */
+	200: CspApiScriptItem;
+};
+
+export type PostUmbracoCspApiV1ScriptItemsByIdHashResponse =
+	PostUmbracoCspApiV1ScriptItemsByIdHashResponses[keyof PostUmbracoCspApiV1ScriptItemsByIdHashResponses];
 
 export type PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashData = {
 	body?: never;

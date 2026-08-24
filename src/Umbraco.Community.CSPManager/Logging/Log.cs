@@ -150,6 +150,12 @@ internal static partial class Log
 	public static partial void ScriptItemHashRegenerated(ILogger logger, Guid scriptItemId);
 
 	[LoggerMessage(
+		EventId = 308,
+		Level = LogLevel.Information,
+		Message = "Manually set hash for script item {ScriptItemId}")]
+	public static partial void ScriptItemHashSetManually(ILogger logger, Guid scriptItemId);
+
+	[LoggerMessage(
 		EventId = 304,
 		Level = LogLevel.Information,
 		Message = "Deleted script item {ScriptItemId}")]

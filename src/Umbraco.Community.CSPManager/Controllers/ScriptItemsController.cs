@@ -70,6 +70,34 @@ public class ScriptItemsController : CspManagerControllerBase
 		}
 	}
 
+	/// <summary>
+	/// Sets a script item's hash directly, with no download or recomputation - for pinning to a
+	/// value obtained elsewhere (e.g. a vendor's own published SRI hash) rather than trusting a
+	/// local re-fetch.
+	/// </summary>
+	[HttpPost("ScriptItems/{id:guid}/hash")]
+	[MapToApiVersion("1.0")]
+	[ProducesResponseType(typeof(CspApiScriptItem), 200)]
+	[ProducesResponseType(typeof(ProblemDetails), 400)]
+	[ProducesResponseType(404)]
+	public async Task<IActionResult> SetHash(Guid id, [FromBody] CspApiSetScriptItemHashRequest request, CancellationToken cancellationToken)
+	{
+		if (!ModelState.IsValid)
+		{
+			return BadRequest(new ValidationProblemDetails(ModelState));
+		}
+
+		try
+		{
+			var item = await _scriptItemService.SetHashAsync(id, request.Hash, cancellationToken);
+			return Ok(CspApiScriptItem.FromScriptItem(item));
+		}
+		catch (InvalidOperationException)
+		{
+			return NotFound();
+		}
+	}
+
 	[HttpDelete("ScriptItems/{id:guid}")]
 	[MapToApiVersion("1.0")]
 	[ProducesResponseType(200)]
