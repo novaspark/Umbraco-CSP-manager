@@ -158,6 +158,7 @@ export class UmbCspSettingsViewElement extends UmbLitElement {
 						<div class="setting-control">
 							<uui-textarea
 								label="Exclude Paths"
+								rows="4"
 								placeholder="/umbraco/swagger/index.html"
 								.value=${(this._workspaceState.definition.excludePaths || '').split(',').join('\n')}
 								@change=${(e: Event) =>
