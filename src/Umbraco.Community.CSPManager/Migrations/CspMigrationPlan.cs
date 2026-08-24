@@ -1,10 +1,10 @@
-﻿namespace Umbraco.Community.CSPManager.Migrations;
+﻿using Umbraco.Cms.Core.Packaging;
 
-using Umbraco.Cms.Core.Packaging;
+namespace Umbraco.Community.CSPManager.Migrations;
 
 public sealed class CspMigrationPlan : PackageMigrationPlan
 {
-	public CspMigrationPlan() : base(CspConstants.PackageAlias)
+	public CspMigrationPlan() : base(Constants.PackageAlias)
 	{
 	}
 
@@ -14,8 +14,6 @@ public sealed class CspMigrationPlan : PackageMigrationPlan
 		To<AddCspManagerSectionToAdminUserGroupMigration>(AddCspManagerSectionToAdminUserGroupMigration.MigrationKey);
 		To<ReportingMigration>(ReportingMigration.MigrationKey);
 		To<MaxSourceLengthMigration>(MaxSourceLengthMigration.MigrationKey);
-		To<InitialScriptItemMigration>(InitialScriptItemMigration.MigrationKey);
-		To<ScriptItemAddSyncMigration>(ScriptItemAddSyncMigration.MigrationKey);
-		To<DefinitionAddExcludePathsMigration>(DefinitionAddExcludePathsMigration.MigrationKey);
+		To<UpgradeInsecureRequestsMigration>(UpgradeInsecureRequestsMigration.MigrationKey);
 	}
 }

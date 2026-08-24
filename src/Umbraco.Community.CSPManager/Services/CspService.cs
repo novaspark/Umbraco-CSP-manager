@@ -1,39 +1,145 @@
-﻿namespace Umbraco.Community.CSPManager.Services;
-
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using NPoco.Expressions;
 using Umbraco.Cms.Core.Cache;
 using Umbraco.Cms.Core.Events;
 using Umbraco.Cms.Infrastructure.Scoping;
 using Umbraco.Community.CSPManager.Extensions;
+using Umbraco.Community.CSPManager.Logging;
 using Umbraco.Community.CSPManager.Models;
 using Umbraco.Community.CSPManager.Notifications;
 using Umbraco.Extensions;
 
-public class CspService : ICspService
+namespace Umbraco.Community.CSPManager.Services;
+
+/// <summary>
+/// Implementation of <see cref="ICspService"/> that manages CSP definitions using
+/// Umbraco's scoping and caching infrastructure.
+/// </summary>
+/// <remarks>
+/// This service uses NPoco ORM for database operations and Umbraco's runtime cache
+/// for performance. It also integrates with the event aggregator to publish notifications
+/// when CSP definitions are saved.
+/// </remarks>
+internal sealed class CspService : ICspService
 {
 	private readonly IEventAggregator _eventAggregator;
 	private readonly IScopeProvider _scopeProvider;
 	private readonly IAppPolicyCache _runtimeCache;
+	private readonly ILogger<CspService> _logger;
+
 	public CspService(
 		IEventAggregator eventAggregator,
 		IScopeProvider scopeProvider,
-		AppCaches appCaches)
+		AppCaches caches,
+		ILogger<CspService> logger)
 	{
 		_eventAggregator = eventAggregator;
 		_scopeProvider = scopeProvider;
-		_runtimeCache = appCaches.RuntimeCache;
+		_runtimeCache = caches.RuntimeCache;
+		_logger = logger;
 	}
 
-	public CspDefinition GetCspDefinition(bool isBackOfficeRequest)
+	public async Task<CspDefinition?> GetCachedCspDefinitionAsync(bool isBackOfficeRequest, CancellationToken cancellationToken)
+	{
+		var cacheKey = isBackOfficeRequest ? Constants.BackOfficeCacheKey : Constants.FrontEndCacheKey;
+		var context = isBackOfficeRequest ? "BackOffice" : "Frontend";
+		var factoryCalled = false;
+
+		// IAppPolicyCache.Get holds a lock while it claims the cache slot, so the Task we return
+		// here is inserted synchronously - before the DB call it wraps has even started - rather
+		// than after it completes like GetCacheItemAsync would. That closes a race where a save's
+		// ClearByKey fires while a load is in flight: the entry it clears actually exists, so the
+		// load can't resurrect stale data by inserting its result afterwards. It also means
+		// concurrent callers for the same key share this one Task instead of each hitting the DB.
+		var load = (Task<CspDefinition>)_runtimeCache.Get(cacheKey, () =>
+		{
+			factoryCalled = true;
+
+			// Not the caller's token: this load is shared by every request waiting on the same key.
+			return GetCspDefinitionAsync(isBackOfficeRequest, CancellationToken.None);
+		}, timeout: null)!;
+
+		CspDefinition definition;
+
+		try
+		{
+			definition = await load.WaitAsync(cancellationToken);
+		}
+		catch (Exception) when (load.IsFaulted)
+		{
+			// Don't leave a failed load cached, or every later request replays the same failure.
+			_runtimeCache.Clear(cacheKey);
+			throw;
+		}
+
+		if (!factoryCalled)
+		{
+			Log.CspDefinitionRetrievedFromCache(_logger, definition.Id, context);
+		}
+
+		// The cached instance is shared by every caller until the next save invalidates it -
+		// CspWritingNotification hands it to consumer code, and the documented pattern for that
+		// notification mutates CspDefinition.Sources directly. Handing out the cached reference
+		// itself would let one handler's mutation leak into every other request sharing the
+		// cache. Returning a defensive copy keeps that mutation scoped to its own request.
+		return CloneDefinition(definition);
+	}
+
+	private static CspDefinition CloneDefinition(CspDefinition definition) => new()
+	{
+		Id = definition.Id,
+		Enabled = definition.Enabled,
+		ReportOnly = definition.ReportOnly,
+		IsBackOffice = definition.IsBackOffice,
+		ReportingDirective = definition.ReportingDirective,
+		ReportUri = definition.ReportUri,
+		UpgradeInsecureRequests = definition.UpgradeInsecureRequests,
+		Sources =
+		[
+			.. definition.Sources.Select(s => new CspDefinitionSource
+			{
+				DefinitionId = s.DefinitionId,
+				Source = s.Source,
+				Directives = [.. s.Directives]
+			})
+		]
+	};
+
+	public async Task<CspDefinition?> GetCspDefinitionAsync(Guid key, CancellationToken cancellationToken)
 	{
 		using var scope = _scopeProvider.CreateScope();
+		var sql = scope.SqlContext.Sql()
+			.SelectAll()
+			.From<CspDefinition>()
+			.Where<CspDefinition>(x => x.Id == key);
+		var definition = await scope.Database.FirstOrDefaultAsync<CspDefinition>(sql, cancellationToken);
 
-		CspDefinition definition = GetDefinition(scope, isBackOfficeRequest)
+		if (definition is not null)
+		{
+			var sourcesSql = scope.SqlContext.Sql()
+				.SelectAll()
+				.From<CspDefinitionSource>()
+				.Where<CspDefinitionSource>(x => x.DefinitionId == definition.Id);
+			definition.Sources = await scope.Database.FetchAsync<CspDefinitionSource>(sourcesSql, cancellationToken);
+		}
+
+		scope.Complete();
+		return definition;
+	}
+
+	public async Task<CspDefinition> GetCspDefinitionAsync(bool isBackOfficeRequest, CancellationToken cancellationToken)
+	{
+		var context = isBackOfficeRequest ? "BackOffice" : "Frontend";
+		Log.LoadingCspDefinitionFromDatabase(_logger, context);
+
+		using var scope = _scopeProvider.CreateScope();
+
+		CspDefinition definition = await GetDefinitionAsync(scope, isBackOfficeRequest, cancellationToken)
 			?? new CspDefinition
 			{
-				Id = isBackOfficeRequest ? CspConstants.DefaultBackofficeId : CspConstants.DefaultFrontEndId,
+				Id = isBackOfficeRequest ? Constants.DefaultBackofficeId : Constants.DefaultFrontEndId,
 				Enabled = false,
 				IsBackOffice = isBackOfficeRequest
 			};
@@ -42,108 +148,107 @@ public class CspService : ICspService
 		return definition;
 	}
 
-	public CspDefinition? GetCachedCspDefinition(bool isBackOfficeRequest)
+	public string GetOrCreateCspNonce(HttpContext context)
 	{
-		string cacheKey = isBackOfficeRequest ? CspConstants.BackOfficeCacheKey : CspConstants.FrontEndCacheKey;
-
-		return _runtimeCache.GetCacheItem(cacheKey, () => GetCspDefinition(isBackOfficeRequest));
-	}
-
-	private static CspDefinition? GetDefinition(IScope scope, bool isBackOffice)
-	{
-		var sql = scope.SqlContext.Sql()
-			.SelectAll()
-			.From<CspDefinition>()
-			.LeftJoin<CspDefinitionSource>()
-			.On<CspDefinition, CspDefinitionSource>((d, s) => d.Id == s.DefinitionId)
-			.Where<CspDefinition>(x => x.IsBackOffice == isBackOffice);
-
-		var data = scope.Database.FetchOneToMany<CspDefinition>(c => c.Sources, sql);
-		return data.FirstOrDefault();
-	}
-
-	public async Task<CspDefinition> SaveCspDefinitionAsync(CspDefinition definition)
-	{
-		using var scope = _scopeProvider.CreateScope();
-
-		definition = await SaveDefinitionAsync(scope, definition);
-
-		scope.Complete();
-
-		await _eventAggregator.PublishAsync(new CspSavedNotification(definition));
-
-		return definition;
-	}
-
-	public string GetCspScriptNonce(HttpContext context)
-	{
-		var cspManagerContext = context.GetCspManagerContext();
+		var cspManagerContext = context.GetOrCreateCspManagerContext();
 
 		if (cspManagerContext == null)
 		{
 			return string.Empty;
 		}
 
-		if (!string.IsNullOrEmpty(cspManagerContext.ScriptNonce))
+		if (!string.IsNullOrEmpty(cspManagerContext.Nonce))
 		{
-			return cspManagerContext.ScriptNonce;
+			return cspManagerContext.Nonce;
 		}
 
 		var nonce = GenerateCspNonceValue();
 
-		cspManagerContext.ScriptNonce = nonce;
+		cspManagerContext.Nonce = nonce;
 
 		return nonce;
 	}
 
-	public string GetCspStyleNonce(HttpContext context)
+	public async Task<CspDefinition> SaveCspDefinitionAsync(CspDefinition definition, CancellationToken cancellationToken)
 	{
-		var cspManagerContext = context.GetCspManagerContext();
+		var context = definition.IsBackOffice ? "BackOffice" : "Frontend";
+		Log.SavingCspDefinition(_logger, definition.Id, context);
 
-		if (cspManagerContext == null)
+		try
 		{
-			return string.Empty;
-		}
+			using (var scope = _scopeProvider.CreateScope())
+			{
+				definition = await SaveDefinitionAsync(scope, definition, cancellationToken);
 
-		if (!string.IsNullOrEmpty(cspManagerContext.StyleNonce))
+				scope.Complete();
+			}
+
+			// Publish after the scope disposes, i.e. after commit - otherwise a request in that
+			// window could reload the pre-save rows and cache them.
+			await _eventAggregator.PublishAsync(new CspSavedNotification(definition), cancellationToken);
+
+			Log.CspDefinitionSaved(_logger, definition.Id, definition.Sources.Count);
+
+			return definition;
+		}
+		catch (Exception ex)
 		{
-			return cspManagerContext.StyleNonce;
+			Log.CspDefinitionSaveFailed(_logger, definition.Id, ex);
+			throw;
 		}
-
-		var nonce = GenerateCspNonceValue();
-
-		cspManagerContext.StyleNonce = nonce;
-
-		return nonce;
 	}
 
-	
-
-	private static async Task<CspDefinition> SaveDefinitionAsync(IScope scope, CspDefinition definition)
+	private static async Task<CspDefinition> SaveDefinitionAsync(IScope scope, CspDefinition definition, CancellationToken cancellationToken)
 	{
-		await scope.Database.SaveAsync(definition);
+		await scope.Database.SaveAsync(definition, cancellationToken);
 
-		definition.Sources = definition.Sources.Where(s => !string.IsNullOrWhiteSpace(s.Source)).ToList();
+		//Empty sources have no value and clog up the header so remove them
+		definition.Sources = [.. definition.Sources.Where(s => !string.IsNullOrWhiteSpace(s.Source))];
 
 		var sourceValues = definition.Sources.Select(s => s.Source).ToList();
 		var cmdDelete = scope.Database.DeleteManyAsync<CspDefinitionSource>()
 			.Where(s => !s.Source.In(sourceValues) && s.DefinitionId == definition.Id);
 
-		await cmdDelete.Execute();
+		await cmdDelete.Execute(cancellationToken);
 
 		foreach (var source in definition.Sources)
 		{
-			await scope.Database.SaveAsync(source);
+			await scope.Database.SaveAsync(source, cancellationToken);
 		}
+
+		return definition;
+	}
+
+	// Two queries instead of a single join because FetchOneToMany has no async variant.
+	// The extra round-trip is acceptable here since results are cached and cache misses are rare.
+	private static async Task<CspDefinition?> GetDefinitionAsync(IScope scope, bool isBackOffice, CancellationToken cancellationToken)
+	{
+		var definitionSql = scope.SqlContext.Sql()
+			.SelectAll()
+			.From<CspDefinition>()
+			.Where<CspDefinition>(x => x.IsBackOffice == isBackOffice);
+
+		var definition = await scope.Database.FirstOrDefaultAsync<CspDefinition>(definitionSql, cancellationToken);
+
+		if (definition is null)
+		{
+			return null;
+		}
+
+		var sourcesSql = scope.SqlContext.Sql()
+			.SelectAll()
+			.From<CspDefinitionSource>()
+			.Where<CspDefinitionSource>(x => x.DefinitionId == definition.Id);
+
+		definition.Sources = await scope.Database.FetchAsync<CspDefinitionSource>(sourcesSql, cancellationToken);
 
 		return definition;
 	}
 
 	private static string GenerateCspNonceValue()
 	{
-		using var rng = RandomNumberGenerator.Create();
-		var nonceBytes = new byte[18];
-		rng.GetBytes(nonceBytes);
+		Span<byte> nonceBytes = stackalloc byte[16]; // 16 bytes = 128 bits
+		RandomNumberGenerator.Fill(nonceBytes);
 		return Convert.ToBase64String(nonceBytes);
 	}
 }

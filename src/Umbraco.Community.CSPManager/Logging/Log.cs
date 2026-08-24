@@ -1,0 +1,117 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace Umbraco.Community.CSPManager.Logging;
+
+/// <summary>
+/// High-performance logging methods for CSP Manager using source generation.
+/// </summary>
+/// <remarks>
+/// Uses <see cref="LoggerMessageAttribute"/> for compile-time log message generation,
+/// providing better performance than runtime string interpolation.
+/// </remarks>
+internal static partial class Log
+{
+	// ===========================================
+	// Middleware Events (1-99)
+	// ===========================================
+
+	[LoggerMessage(
+		EventId = 1,
+		Level = LogLevel.Error,
+		Message = "Failed to construct CSP header for {Path}")]
+	public static partial void CspHeaderConstructionFailed(ILogger logger, PathString path, Exception ex);
+
+	[LoggerMessage(
+		EventId = 2,
+		Level = LogLevel.Debug,
+		Message = "CSP Header definition disabled for {DefinitionId}")]
+	public static partial void CspDefinitionDisabled(ILogger logger, Guid definitionId);
+
+
+	[LoggerMessage(
+		EventId = 3,
+		Level = LogLevel.Debug,
+		Message = "Back-office CSP header disabled via config")]
+	public static partial void CspBackOfficeDisabled(ILogger logger);
+
+	[LoggerMessage(
+		EventId = 4,
+		Level = LogLevel.Debug,
+		Message = "CSP header is empty for {DefinitionId}")]
+	public static partial void CspHeaderEmpty(ILogger logger, Guid definitionId);
+
+	[LoggerMessage(
+		EventId = 5,
+		Level = LogLevel.Debug,
+		Message = "CSP OnStarting callback fired for {Path}")]
+	public static partial void CspOnStartingFired(ILogger logger, PathString path);
+
+	[LoggerMessage(
+		EventId = 6,
+		Level = LogLevel.Debug,
+		Message = "CSP header {HeaderName} applied for {DefinitionId} ({Length} chars)")]
+	public static partial void CspHeaderApplied(ILogger logger, string headerName, Guid definitionId, int length);
+
+	[LoggerMessage(
+		EventId = 8,
+		Level = LogLevel.Debug,
+		Message = "CSP header skipped for {Path}: the request was cancelled before the header could be applied")]
+	public static partial void CspHeaderCancelled(ILogger logger, PathString path);
+
+	[LoggerMessage(
+		EventId = 9,
+		Level = LogLevel.Debug,
+		Message = "No CSP definition was returned for {Context}; no CSP header was applied")]
+	public static partial void CspDefinitionNotFound(ILogger logger, string context);
+
+	// ===========================================
+	// Service Events (100-199)
+	// ===========================================
+
+	[LoggerMessage(
+		EventId = 100,
+		Level = LogLevel.Information,
+		Message = "Saving CSP definition {DefinitionId} for {Context}")]
+	public static partial void SavingCspDefinition(ILogger logger, Guid definitionId, string context);
+
+	[LoggerMessage(
+		EventId = 101,
+		Level = LogLevel.Information,
+		Message = "Saved CSP definition {DefinitionId} with {SourceCount} sources")]
+	public static partial void CspDefinitionSaved(ILogger logger, Guid definitionId, int sourceCount);
+
+	[LoggerMessage(
+		EventId = 102,
+		Level = LogLevel.Error,
+		Message = "Failed to save CSP definition {DefinitionId}")]
+	public static partial void CspDefinitionSaveFailed(ILogger logger, Guid definitionId, Exception ex);
+
+	[LoggerMessage(
+		EventId = 103,
+		Level = LogLevel.Debug,
+		Message = "Retrieved CSP definition {DefinitionId} from cache for {Context}")]
+	public static partial void CspDefinitionRetrievedFromCache(ILogger logger, Guid definitionId, string context);
+
+	[LoggerMessage(
+		EventId = 104,
+		Level = LogLevel.Debug,
+		Message = "Loading CSP definition from database for {Context}")]
+	public static partial void LoadingCspDefinitionFromDatabase(ILogger logger, string context);
+
+	// ===========================================
+	// Cache Events (200-299)
+	// ===========================================
+
+	[LoggerMessage(
+		EventId = 200,
+		Level = LogLevel.Debug,
+		Message = "Clearing CSP cache for {CacheKey}")]
+	public static partial void ClearingCspCache(ILogger logger, string cacheKey);
+
+	[LoggerMessage(
+		EventId = 201,
+		Level = LogLevel.Debug,
+		Message = "Clearing all CSP caches")]
+	public static partial void ClearingAllCspCaches(ILogger logger);
+}

@@ -1,27 +1,28 @@
-﻿namespace Umbraco.Community.CSPManager.Tests.Middleware;
-
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Umbraco.Cms.Core;
+using Umbraco.Cms.Core.Configuration;
 using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.Events;
+using Umbraco.Cms.Core.Notifications;
 using Umbraco.Cms.Core.Routing;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Tests.Integration.Implementations;
 using Umbraco.Community.CSPManager.Middleware;
-using Umbraco.Community.CSPManager.Services;
 using Umbraco.Community.CSPManager.Models;
 using Umbraco.Community.CSPManager.Notifications;
+using Umbraco.Community.CSPManager.Services;
+using UmbConstants = Umbraco.Cms.Core.Constants;
 
-using IHostingEnvironment = Umbraco.Cms.Core.Hosting.IHostingEnvironment;
-using Umbraco.Cms.Core.Configuration;
+namespace Umbraco.Community.CSPManager.Tests.Middleware;
 
 [TestFixture]
 public class CspMiddlewareTests
@@ -31,7 +32,7 @@ public class CspMiddlewareTests
 	private ICspService _cspService;
 
 	private IEventAggregator _eventAggregator;
-	private static Dictionary<string, string> InMemoryConfiguration => new();
+	private static Dictionary<string, string> InMemoryConfiguration => [];
 
 	private TestHelper TestHelper { get; } = new();
 
@@ -41,13 +42,20 @@ public class CspMiddlewareTests
 	public void SetUp()
 	{
 		InMemoryConfiguration[
-			Constants.Configuration.ConfigUnattended + ":" + nameof(UnattendedSettings.InstallUnattended)] = "true";
+			UmbConstants.Configuration.ConfigUnattended + ":" + nameof(UnattendedSettings.InstallUnattended)] = "true";
 		_cspService = Mock.Of<ICspService>();
 		_eventAggregator = Mock.Of<IEventAggregator>();
+		_host = BuildTestHost();
+	}
+
+	private IHost BuildTestHost(
+		Action<IServiceCollection> extraServices = null,
+		Action<IApplicationBuilder> extraApp = null)
+	{
 		var runtimeState = Mock.Of<IRuntimeState>(x => x.Level == RuntimeLevel.Run);
 		var runtime = Mock.Of<IRuntime>(x => x.State == runtimeState);
 
-		_host = new HostBuilder()
+		return new HostBuilder()
 			.ConfigureWebHost(webBuilder =>
 			{
 				webBuilder
@@ -60,20 +68,24 @@ public class CspMiddlewareTests
 						services.AddSingleton(_ => runtime);
 						services.AddSingleton(_ => TestHelper.GetHostingEnvironment());
 						services.AddSingleton<IUmbracoVersion, UmbracoVersion>();
-#if NET6_0
 						services.AddTransient(sp => new UmbracoRequestPaths(
-							sp.GetRequiredService<IOptions<GlobalSettings>>(),
-							sp.GetRequiredService<IHostingEnvironment>()));
-#else
-						services.AddTransient(sp => new UmbracoRequestPaths(
-							sp.GetRequiredService<IOptions<GlobalSettings>>(),
-							sp.GetRequiredService<IHostingEnvironment>(),
+							TestHelper.GetHostingEnvironment(),
 							sp.GetRequiredService<IOptions<UmbracoRequestPathsOptions>>()));
-#endif
+						extraServices?.Invoke(services);
+						services.Configure<ImagingSettings>(options =>
+						{
+							if (options.HMACSecretKey.Length == 0)
+							{
+								byte[] secret = new byte[64];
+								RandomNumberGenerator.Fill(secret);
+								options.HMACSecretKey = secret;
+							}
+						});
 					})
 					.Configure(app =>
 					{
 						app.UseMiddleware<CspMiddleware>();
+						extraApp?.Invoke(app);
 					})
 					.ConfigureAppConfiguration((context, configBuilder) =>
 					{
@@ -81,7 +93,8 @@ public class CspMiddlewareTests
 						configBuilder.Sources.Clear();
 						configBuilder.AddInMemoryCollection(InMemoryConfiguration);
 					});
-			}).ConfigureUmbracoDefaults()
+			})
+			.ConfigureUmbracoDefaults()
 			.Start();
 	}
 
@@ -92,34 +105,253 @@ public class CspMiddlewareTests
 		Mock.Get(Services.GetRequiredService<IRuntimeState>())
 			.SetupGet(x => x.Level).Returns(runtimeLevel);
 
-		await _host.GetTestClient().GetAsync("/",	HttpCompletionOption.ResponseHeadersRead);
-		Mock.Get(_cspService).Verify(x => x.GetCachedCspDefinition(It.IsAny<bool>()), verifyCalls);
+		await _host.GetTestClient().GetAsync("/", HttpCompletionOption.ResponseHeadersRead);
+		Mock.Get(_cspService).Verify(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), verifyCalls);
 		Mock.Get(_eventAggregator).Verify(x => x.PublishAsync(It.IsAny<CspWritingNotification>(),
 			It.IsAny<CancellationToken>()), verifyCalls);
+	}
+
+	// ICspService.GetCachedCspDefinitionAsync returns a defensive copy on every call
+	// (CspService.CloneDefinition) precisely so that CspWritingNotification handlers can freely
+	// mutate notification.CspDefinition - as the documented pattern in
+	// docs/advanced/notification-events.md does - without corrupting what other requests get
+	// served from the shared cache. This test mocks GetCachedCspDefinitionAsync to hand out a
+	// fresh clone per call, matching that contract, and asserts the middleware/notification
+	// pipeline keeps a handler's mutation scoped to its own request.
+	[Test]
+	public async Task CspMiddleware_WritingNotificationHandlerMutatesDefinition_DoesNotLeakIntoUnrelatedRequests()
+	{
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(() => new CspDefinition
+			{
+				Id = Constants.DefaultFrontEndId,
+				Enabled = true,
+				IsBackOffice = false,
+				Sources = [new CspDefinitionSource { Source = "'self'", Directives = [Constants.Directives.DefaultSource] }]
+			});
+
+		Mock.Get(_eventAggregator)
+			.Setup(x => x.PublishAsync(It.IsAny<CspWritingNotification>(), It.IsAny<CancellationToken>()))
+			.Callback<INotification, CancellationToken>((n, _) =>
+			{
+				var notification = (CspWritingNotification)n;
+				if (notification.HttpContext.Request.Path.StartsWithSegments("/api"))
+				{
+					notification.CspDefinition!.Sources.Add(new CspDefinitionSource
+					{
+						Source = "api.example.com",
+						Directives = [Constants.Directives.ConnectSource]
+					});
+				}
+			})
+			.Returns(Task.CompletedTask);
+
+		var apiResponse = await _host.GetTestClient().GetAsync("/api/orders");
+		var apiHeader = apiResponse.Headers.GetValues(Constants.HeaderName).First();
+		Assert.That(apiHeader, Does.Contain("api.example.com"));
+
+		var unrelatedResponse = await _host.GetTestClient().GetAsync("/content/page");
+		var unrelatedHeader = unrelatedResponse.Headers.GetValues(Constants.HeaderName).First();
+
+		Assert.That(unrelatedHeader, Does.Not.Contain("api.example.com"),
+			"a handler scoped to /api requests must not leak its source into unrelated requests");
 	}
 
 	[Test]
 	[TestCaseSource(typeof(MiddlewareTestCases), nameof(MiddlewareTestCases.CspMiddlewareReturnsExpectedCspWhenEnabledCases))]
 	public async Task CspMiddleware_ReturnsExpectedCspWhenEnabled(string uri, CspDefinition definition)
 	{
-		Mock.Get(_cspService).Setup(x => x.GetCachedCspDefinition(It.IsAny<bool>())).Returns(definition);
+		Mock.Get(_cspService).Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(definition);
 
-		var version = _host.Services.GetRequiredService<IUmbracoVersion>();
-		var versionPostFix = version.Version.Major >= 13 ? $"-{version.Version.Major}" : null;
 		var response = await _host.GetTestClient().GetAsync(uri);
 		if (definition.Enabled)
 		{
-			await Verify(response.Headers)
-				.UseDirectory(nameof(CspMiddleware_ReturnsExpectedCspWhenEnabled))
-				.UseFileName(
-					$"{TestContext.CurrentContext.Test.Name}{versionPostFix}");
+			string expectedHeaderName = definition.ReportOnly
+				? Constants.ReportOnlyHeaderName
+				: Constants.HeaderName;
+
+			Assert.That(response.Headers.Contains(expectedHeaderName), Is.True);
+			var headerValues = response.Headers.GetValues(expectedHeaderName).FirstOrDefault();
+			Assert.That(headerValues, Is.Not.Null);
+
+			var expectedCsp = "default-src 'self' marketplace.umbraco.com our.umbraco.com;script-src 'self' 'unsafe-inline' 'unsafe-eval';style-src 'self' 'unsafe-inline';img-src 'self' our.umbraco.com data: dashboard.umbraco.com;font-src 'self'";
+			Assert.That(headerValues, Is.EqualTo(expectedCsp));
 		}
 		else
 		{
-			response.Headers.Should().NotContainKey(CspConstants.HeaderName);
+			Assert.That(response.Headers.Contains(Constants.HeaderName), Is.False);
 		}
 	}
 
+	[Test]
+	[TestCaseSource(typeof(MiddlewareTestCases), nameof(MiddlewareTestCases.CspMiddlewareHeaderContentCases))]
+	public async Task CspMiddleware_ReturnsExpectedCspHeaderContent(string uri, CspDefinition definition, string expectedHeaderName, string expectedHeaderValue)
+	{
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(definition);
+
+		var response = await _host.GetTestClient().GetAsync(uri);
+
+		Assert.That(response.Headers.Contains(expectedHeaderName), Is.True);
+		var headerValue = response.Headers.GetValues(expectedHeaderName).FirstOrDefault();
+		Assert.That(headerValue, Is.EqualTo(expectedHeaderValue));
+	}
+
+	[Test]
+	public async Task CspMiddleware_WithDisableBackOfficeHeader_DoesNotSetHeaderForBackofficeRequest()
+	{
+		var definition = new CspDefinition { Enabled = true, IsBackOffice = true, Sources = Constants.DefaultBackOfficeCsp };
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(definition);
+
+		using var host = BuildTestHost(
+			extraServices: s => s.Configure<CspManagerOptions>(o => o.DisableBackOfficeHeader = true));
+
+		var response = await host.GetTestClient().GetAsync("/umbraco");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(response.Headers.Contains(Constants.HeaderName), Is.False);
+			Assert.That(response.Headers.Contains(Constants.ReportOnlyHeaderName), Is.False);
+		});
+	}
+
+	[Test]
+	public async Task CspMiddleware_WithScriptNonceSetInItems_InjectsNonceIntoScriptSrc()
+	{
+		const string testNonce = "test-nonce-abc123";
+		var definition = new CspDefinition
+		{
+			Id = Constants.DefaultFrontEndId,
+			Enabled = true,
+			IsBackOffice = false,
+			Sources = [new CspDefinitionSource { Source = "'self'", Directives = [Constants.Directives.ScriptSource] }]
+		};
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(definition);
+		Mock.Get(_cspService)
+			.Setup(x => x.GetOrCreateCspNonce(It.IsAny<HttpContext>()))
+			.Returns(testNonce);
+
+		using var host = BuildTestHost(extraApp: app =>
+		{
+			app.Use(async (ctx, next) =>
+			{
+				ctx.Items[Constants.TagHelper.CspManagerScriptNonceSet] = true;
+				await next(ctx);
+			});
+		});
+
+		var response = await host.GetTestClient().GetAsync("/");
+
+		Assert.That(response.Headers.Contains(Constants.HeaderName), Is.True);
+		var headerValue = response.Headers.GetValues(Constants.HeaderName).First();
+		Assert.That(headerValue, Does.Contain($"'nonce-{testNonce}'"));
+	}
+
+	[Test]
+	public async Task CspMiddleware_WhenServiceThrows_RequestCompletesWithoutCspHeader()
+	{
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ThrowsAsync(new InvalidOperationException("Test exception"));
+
+		// Exception is swallowed in OnStarting — request completes without throwing
+		var response = await _host.GetTestClient().GetAsync("/");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(response.Headers.Contains(Constants.HeaderName), Is.False);
+			Assert.That(response.Headers.Contains(Constants.ReportOnlyHeaderName), Is.False);
+		});
+	}
+
+	[Test]
+	public async Task CspMiddleware_WhenServiceIsCancelled_RequestCompletesWithoutCspHeader()
+	{
+		// Regression test for #130: a TaskCanceledException escaping the OnStarting callback
+		// was reported by Kestrel as "The response has been aborted due to an unhandled
+		// application exception" instead of being swallowed.
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ThrowsAsync(new TaskCanceledException("Request aborted"));
+
+		var logger = new Mock<ILogger<CspMiddleware>>();
+		logger.Setup(x => x.IsEnabled(LogLevel.Debug)).Returns(true);
+
+		using var host = BuildTestHost(extraServices: s => s.AddSingleton(logger.Object));
+
+		var response = await host.GetTestClient().GetAsync("/");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(response.Headers.Contains(Constants.HeaderName), Is.False);
+			Assert.That(response.Headers.Contains(Constants.ReportOnlyHeaderName), Is.False);
+		});
+
+		logger.Verify(x => x.Log(
+			LogLevel.Debug,
+			It.Is<EventId>(e => e.Name == "CspHeaderCancelled"),
+			It.IsAny<It.IsAnyType>(),
+			null,
+			It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+	}
+
+	[Test]
+	public async Task CspMiddleware_DoesNotCancelDefinitionLoadWhenClientDisconnects()
+	{
+		// The cached definition is shared process-wide, so a per-request abort token must not
+		// be threaded into the load — one client disconnecting would fault it for everyone.
+		CancellationToken observedToken = new(canceled: true);
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.Callback<bool, CancellationToken>((_, token) => observedToken = token)
+			.ReturnsAsync(new CspDefinition { Id = Constants.DefaultFrontEndId, Enabled = false });
+
+		await _host.GetTestClient().GetAsync("/");
+
+		Assert.That(observedToken.CanBeCanceled, Is.False,
+			"The definition load must not be tied to the request lifetime.");
+	}
+
+	[Test]
+	public async Task CspMiddleware_WhenDefinitionIsNull_LogsNotFoundRatherThanDisabled()
+	{
+		Mock.Get(_cspService)
+			.Setup(x => x.GetCachedCspDefinitionAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((CspDefinition)null);
+
+		var logger = new Mock<ILogger<CspMiddleware>>();
+		logger.Setup(x => x.IsEnabled(LogLevel.Debug)).Returns(true);
+
+		using var host = BuildTestHost(extraServices: s => s.AddSingleton(logger.Object));
+
+		var response = await host.GetTestClient().GetAsync("/");
+
+		Assert.That(response.Headers.Contains(Constants.HeaderName), Is.False);
+
+		logger.Verify(x => x.Log(
+			LogLevel.Debug,
+			It.Is<EventId>(e => e.Name == "CspDefinitionNotFound"),
+			It.IsAny<It.IsAnyType>(),
+			null,
+			It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+		logger.Verify(x => x.Log(
+			LogLevel.Debug,
+			It.Is<EventId>(e => e.Name == "CspDefinitionDisabled"),
+			It.IsAny<It.IsAnyType>(),
+			null,
+			It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Never);
+	}
+
 	[TearDown]
-	public void TearDownAsync() => _host.StopAsync();
+	public async Task TearDownAsync()
+	{
+		await _host.StopAsync();
+		_host.Dispose();
+	}
 }

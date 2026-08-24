@@ -1,33 +1,31 @@
-﻿namespace Umbraco.Community.CSPManager.Migrations;
-
-using System;
-using System.Linq;
-using Umbraco.Cms.Core.Services;
+﻿using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Infrastructure.Migrations;
 using UmbConstants = Umbraco.Cms.Core.Constants;
 
-public class AddCspManagerSectionToAdminUserGroupMigration : MigrationBase
+namespace Umbraco.Community.CSPManager.Migrations;
+
+public class AddCspManagerSectionToAdminUserGroupMigration : AsyncMigrationBase
 {
 	public const string MigrationKey = "csp-manager-add-section";
 
 
-	private readonly IUserService _userService;
+	private readonly IUserGroupService _userGroupService;
 
-	public AddCspManagerSectionToAdminUserGroupMigration(IMigrationContext context, IUserService userService)
+	public AddCspManagerSectionToAdminUserGroupMigration(IMigrationContext context, IUserGroupService userGroupService)
 	   : base(context)
 	{
-		_userService = userService;
+		_userGroupService = userGroupService;
 	}
 
-	protected override void Migrate()
+	protected override async Task MigrateAsync()
 	{
-		var userGroup = _userService.GetUserGroupByAlias(UmbConstants.Security.AdminGroupAlias);
-
-		if (userGroup != null && !userGroup.AllowedSections.Contains(CspConstants.PluginAlias))
+		var result = await _userGroupService.GetAsync(UmbConstants.Security.AdminGroupAlias);
+		if (result == null || result.AllowedSections.Contains<string>(Constants.SectionAlias))
 		{
-			userGroup.AddAllowedSection(CspConstants.PluginAlias);
-
-			_userService.Save(userGroup);
+			return;
 		}
+
+		result.AddAllowedSection(Constants.SectionAlias);
+		await _userGroupService.UpdateAsync(result, UmbConstants.Security.SuperUserKey);
 	}
 }

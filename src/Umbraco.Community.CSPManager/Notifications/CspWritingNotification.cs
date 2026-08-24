@@ -1,11 +1,11 @@
-﻿namespace Umbraco.Community.CSPManager.Notifications;
-
-using Microsoft.AspNetCore.Http;
-using Models;
+﻿using Microsoft.AspNetCore.Http;
 using Umbraco.Cms.Core.Notifications;
+using Umbraco.Community.CSPManager.Models;
+
+namespace Umbraco.Community.CSPManager.Notifications;
 
 /// <summary>
-/// Notification published, when building a <see cref="Models.CspDefinition"/> for the provided <see cref="HttpContext"/>.
+/// Notification published, when building a <see cref="Models.CspDefinition"/> for the provided <see cref="Microsoft.AspNetCore.Http.HttpContext"/>.
 /// </summary>
 public class CspWritingNotification : INotification
 {

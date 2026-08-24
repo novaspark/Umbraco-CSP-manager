@@ -1,68 +1,57 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <EnableDefaultContentItems>true</EnableDefaultContentItems>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Product>Umbraco.Community.CSPManager</Product>
+    <PackageId>Umbraco.Community.CSPManager</PackageId>
+    <Title>Umbraco.Community.CSPManager</Title>
+    <Description>Enabled CSP management with in the Umbraco back office</Description>
+    <PackageTags>umbraco plugin package umbraco-marketplace Content-Security-Policy security CSP csp Content Security Policy</PackageTags>
+    <RootNamespace>Umbraco.Community.CSPManager</RootNamespace>
+    <PackageProjectUrl>https://github.com/Matthew-Wise/Umbraco-CSP-manager</PackageProjectUrl>
+    <PackageReadmeFile>README_nuget.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms.Web.Website" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" />
+    <InternalsVisibleTo Include="Umbraco.Community.CSPManager.Tests" />
+    <!-- Required for Moq to proxy internal types at runtime. Moq generates classes in a dynamic
+         assembly named DynamicProxyGenAssembly2 — without this, mocking fails on any internal type. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClientAssetsInputs Include="Client\**" Exclude="$(DefaultItemExcludes)" />
 
-	<PropertyGroup>
-		<TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<IsPackable>true</IsPackable>
-		<AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-		<StaticWebAssetBasePath>App_Plugins/CspManager</StaticWebAssetBasePath>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	</PropertyGroup>
+    <!-- Don't include the client folder as part of packaging nuget build -->
+    <Content Remove="Client\**" />
+    <!-- However make the Umbraco-package.json included for dotnet pack or nuget package and visible to the solution -->
+    <None Include="Client\public\umbraco-package.json" Pack="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\README_nuget.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
-	<PropertyGroup>
-		<AssemblyVersion>2.3.10</AssemblyVersion>
-		<Product>Umbraco.Community.CSPManager</Product>
-		<PackageId>Umbraco.Community.CSPManager</PackageId>
-		<Title>Umbraco.Community.CSPManager</Title>
-		<Description>Enabled CSP management with in the Umbraco back office</Description>
-		<PackageTags>umbraco plugin package umbraco-marketplace Content-Security-Policy security CSP csp Content Security Policy</PackageTags>
-		<RootNamespace>Umbraco.Community.CSPManager</RootNamespace>
-		<Authors>Matthew Wise</Authors>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>https://github.com/Matthew-Wise/Umbraco-CSP-manager</RepositoryUrl>
-		<PackageProjectUrl>https://github.com/Matthew-Wise/Umbraco-CSP-manager</PackageProjectUrl>
-		<PackageIcon>icon.png</PackageIcon>
-		<PackageReadmeFile>Readme.md</PackageReadmeFile>
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<FileVersion>$(AssemblyVersion)</FileVersion>
-		<Version>$(AssemblyVersion)</Version>
-	</PropertyGroup>
+  <!-- Restore and build Client files -->
+  <Target Name="RestoreClient" Inputs="Client\package.json;Client\package-lock.json" Outputs="Client\node_modules\.package-lock.json">
+    <Exec Command="npm ci" WorkingDirectory="Client" />
+  </Target>
 
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-		<PackageReference Include="Umbraco.Cms.Core" Version="10.*" />
-		<PackageReference Include="Umbraco.Cms.Web.BackOffice" Version="10.*" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
-		<PackageReference Include="Umbraco.Cms.Core" Version="11.*" />
-		<PackageReference Include="Umbraco.Cms.Web.BackOffice" Version="11.*" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-		<PackageReference Include="Umbraco.Cms.Core" Version="[13.4.1,14)" />
-		<PackageReference Include="Umbraco.Cms.Web.BackOffice" Version="[13.4.1,14)" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="..\..\Readme.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\..\images\icon.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<SupportedPlatform Include="browser" />
-	</ItemGroup>
+  <Target Name="BuildClient" BeforeTargets="AssignTargetPaths" DependsOnTargets="RestoreClient" Inputs="@(ClientAssetsInputs)" Outputs="$(IntermediateOutputPath)client.txt">
+    <Exec Command="npm run build" WorkingDirectory="Client" />
+    <ItemGroup>
+      <_ClientAssetsBuildOutput Include="wwwroot\App_Plugins\**" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)client.txt" Lines="@(_ClientAssetsBuildOutput)" Overwrite="true" />
+  </Target>
 
 </Project>

@@ -1,59 +1,63 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
 
-	<PropertyGroup>
-		<TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>disable</Nullable>
-		<IsPackable>false</IsPackable>
-		<PreserveCompilationContext>true</PreserveCompilationContext>
-	</PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="SystemTextJson.JsonDiffPatch.NUnit" />
 
-	<ItemGroup>
-		<None Remove="appsettings.Tests.json" />
-		<None Remove="appsettings.Tests.Local.json" />
-	</ItemGroup>
+    <PackageReference Include="Umbraco.Cms.Tests.Integration" />
+    <ProjectReference Include="..\Umbraco.Community.CSPManager\Umbraco.Community.CSPManager.csproj" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<Content Include="appsettings.Tests.json" CopyToOutputDirectory="PreserveNewest" />
-		<Content Include="appsettings.Tests.Local.json">
-			<CopyToOutputDirectory Condition="Exists(%(Identity))">PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.Tests.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="appSettings.Tests.Local.json" />
+  </ItemGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-		<PackageReference Include="Umbraco.Cms.Tests.Integration" Version="10.*" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="6.*" />
-	</ItemGroup>
+  <ItemGroup>
+    <Content Include="appSettings.Tests.Local.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
-		<PackageReference Include="Umbraco.Cms.Tests.Integration" Version="11.*" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.*" />
-	</ItemGroup>
+  <ItemGroup>
+    <Using Include="Moq" />
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-		<PackageReference Include="Umbraco.Cms.Tests.Integration" Version="13.*" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.*" />
-	</ItemGroup>
+  <PropertyGroup>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <GenerateDepsFile>true</GenerateDepsFile>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="FluentAssertions" Version="6.12.0" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-		<PackageReference Include="Moq" Version="4.20.70" />
-		<PackageReference Include="NUnit" Version="3.14.0" />
-		<PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-		<PackageReference Include="NUnit.Analyzers" Version="3.6.1">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="coverlet.collector" Version="6.0.2">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Verify.NUnit" Version="22.5.0" />
-	</ItemGroup>
+  <ItemGroup>
+    <Content Update="$(NuGetPackageRoot)\umbraco.cms.tests.integration\17.0.0\contentFiles\any\net10.0\appsettings.Tests.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\Umbraco.Community.CSPManager\Umbraco.Community.CSPManager.csproj" />
-	</ItemGroup>
-
+  <Target Name="EnsureUmbracoDepsJson" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).deps.json" DestinationFiles="$(OutputPath)Umbraco.Tests.Integration.deps.json" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

@@ -1,10 +1,18 @@
-﻿namespace Umbraco.Community.CSPManager.Models;
-
+﻿using NPoco;
 using Umbraco.Cms.Infrastructure.Persistence.DatabaseAnnotations;
-using NPoco;
 
+namespace Umbraco.Community.CSPManager.Models;
+
+/// <summary>
+/// Represents a source entry in a Content Security Policy definition.
+/// </summary>
+/// <remarks>
+/// A source defines an allowed origin (e.g., "'self'", "https://example.com", "'unsafe-inline'")
+/// and the CSP directives it applies to. Multiple sources combine to form the complete CSP policy.
+/// The source and definition ID together form a composite primary key.
+/// </remarks>
 [TableName((nameof(CspDefinitionSource)))]
-[PrimaryKey(new[] { nameof(DefinitionId), nameof(Source) })]
+[PrimaryKey([nameof(DefinitionId), nameof(Source)])]
 public class CspDefinitionSource
 {
 	[PrimaryKeyColumn(
@@ -21,5 +29,5 @@ public class CspDefinitionSource
 
 	[SerializedColumn(Name = nameof(Directives))]
 	[SpecialDbType(SpecialDbTypes.NVARCHARMAX)]
-	public List<string> Directives { get; set; } = new();
+	public List<string> Directives { get; set; } = [];
 }

@@ -1,39 +1,83 @@
-﻿namespace Umbraco.Community.CSPManager.Middleware;
-
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Events;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Community.CSPManager.Extensions;
+using Umbraco.Community.CSPManager.Logging;
 using Umbraco.Community.CSPManager.Models;
 using Umbraco.Community.CSPManager.Notifications;
 using Umbraco.Community.CSPManager.Services;
 using Umbraco.Extensions;
 
+namespace Umbraco.Community.CSPManager.Middleware;
+
+/// <summary>
+/// ASP.NET Core middleware that injects Content Security Policy headers into HTTP responses.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This middleware intercepts all requests and adds the appropriate CSP header based on the
+/// configured policy for either the frontend or backoffice context. It supports both
+/// enforcing (Content-Security-Policy) and report-only (Content-Security-Policy-Report-Only) modes.
+/// </para>
+/// <para>
+/// The middleware only runs when Umbraco is in the <see cref="Umbraco.Cms.Core.RuntimeLevel.Run"/> state.
+/// It also respects the <see cref="CspManagerOptions.DisableBackOfficeHeader"/> configuration option.
+/// </para>
+/// </remarks>
 public class CspMiddleware
 {
 	private readonly RequestDelegate _next;
 	private readonly IRuntimeState _runtimeState;
 	private readonly ICspService _cspService;
-	private readonly IScriptItemService _scriptItemService;
 	private readonly IEventAggregator _eventAggregator;
+	private readonly ILogger<CspMiddleware> _logger;
+	private CspManagerOptions _cspOptions;
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="CspMiddleware"/> class.
+	/// </summary>
+	/// <param name="next">The next middleware in the pipeline.</param>
+	/// <param name="runtimeState">The Umbraco runtime state service.</param>
+	/// <param name="cspService">The CSP service for retrieving definitions.</param>
+	/// <param name="eventAggregator">The event aggregator for publishing notifications.</param>
+	/// <param name="cspOptions">The CSP Manager configuration options.</param>
+	/// <param name="logger">The logger for diagnostic output.</param>
 	public CspMiddleware(
 		RequestDelegate next,
 		IRuntimeState runtimeState,
 		ICspService cspService,
-		IScriptItemService scriptItemService,
-		IEventAggregator eventAggregator)
+		IEventAggregator eventAggregator,
+		IOptionsMonitor<CspManagerOptions> cspOptions,
+		ILogger<CspMiddleware> logger)
 	{
 		_next = next;
 		_runtimeState = runtimeState;
 		_cspService = cspService;
-		_scriptItemService = scriptItemService;
 		_eventAggregator = eventAggregator;
+		_logger = logger;
+
+		cspOptions.OnChange(config =>
+		{
+			_cspOptions = config;
+		});
+		_cspOptions = cspOptions.CurrentValue;
 	}
 
+	/// <summary>
+	/// Processes the HTTP request and adds CSP headers to the response.
+	/// </summary>
+	/// <param name="context">The HTTP context for the current request.</param>
+	/// <returns>A task representing the asynchronous operation.</returns>
+	/// <remarks>
+	/// The CSP header is added using <see cref="HttpResponse.OnStarting"/> to ensure it is
+	/// set before any response body is written. A <see cref="Notifications.CspWritingNotification"/>
+	/// is published before the header is constructed, allowing other components to modify
+	/// or react to the CSP being applied.
+	/// </remarks>
 	public async Task InvokeAsync(HttpContext context)
 	{
 		if (_runtimeState.Level != RuntimeLevel.Run)
@@ -44,89 +88,133 @@ public class CspMiddleware
 
 		context.Response.OnStarting(async () =>
 		{
-			var definition = _cspService.GetCachedCspDefinition(context.Request.IsBackOfficeRequest());
-
-			await _eventAggregator.PublishAsync(new CspWritingNotification(definition, context));
-
-			if (definition is not { Enabled: true })
+			try
 			{
-				return;
-			}
+				Log.CspOnStartingFired(_logger, context.Request.Path);
 
-			var scriptHashes = await GetScriptHashes(definition, context);
+				var isBackOfficeRequest = context.Request.IsBackOfficeRequest() ||
+					context.Request.Path.StartsWithSegments("/umbraco");
 
-			var csp = ConstructCspDictionary(definition, context, scriptHashes);
-			var cspValue = string.Join(";", csp.Select(x => x.Key + " " + x.Value));
-
-			if (definition.ExcludePaths!=null)
-			{
-				var path = context.Request.Path.ToString();
-				if (definition.ExcludePaths.Split(',').Any(p => p.Trim().Equals(path, StringComparison.OrdinalIgnoreCase)))
+				if (isBackOfficeRequest && _cspOptions.DisableBackOfficeHeader)
 				{
+					Log.CspBackOfficeDisabled(_logger);
 					return;
 				}
-			}
 
-			if (!string.IsNullOrEmpty(cspValue))
-			{
-				context.Response.Headers.Append(definition.ReportOnly ? CspConstants.ReportOnlyHeaderName : CspConstants.HeaderName, cspValue + ";");
+				// Deliberately not context.RequestAborted: this call populates a process-wide
+				// cache that other in-flight requests await, so one client disconnecting must
+				// not cancel the load and fault the shared entry for everyone else.
+				var definition = await _cspService.GetCachedCspDefinitionAsync(isBackOfficeRequest, CancellationToken.None);
+				await _eventAggregator.PublishAsync(new CspWritingNotification(definition, context));
+
+				if (definition is null)
+				{
+					Log.CspDefinitionNotFound(_logger, isBackOfficeRequest ? "BackOffice" : "Frontend");
+					return;
+				}
+
+				if (!definition.Enabled)
+				{
+					Log.CspDefinitionDisabled(_logger, definition.Id);
+					return;
+				}
+
+				var csp = ConstructCspDictionary(definition, context);
+				var cspValue = BuildCspHeader(csp);
+
+				if (!string.IsNullOrWhiteSpace(cspValue))
+				{
+					var headerName = definition.ReportOnly ? Constants.ReportOnlyHeaderName : Constants.HeaderName;
+					context.Response.Headers.Append(headerName, cspValue);
+					Log.CspHeaderApplied(_logger, headerName, definition.Id, cspValue.Length);
+				}
+				else
+				{
+					Log.CspHeaderEmpty(_logger, definition.Id);
+				}
 			}
-			
+			catch (OperationCanceledException)
+			{
+				// The client disconnected before the response started, so there is no response
+				// left to add a header to. Rethrowing from OnStarting would surface as an
+				// unhandled application exception and abort the connection.
+				Log.CspHeaderCancelled(_logger, context.Request.Path);
+			}
+			catch (Exception ex)
+			{
+				// CSP header injection should never break the request.
+				// Log the error and continue without the CSP header.
+				Log.CspHeaderConstructionFailed(_logger, context.Request.Path, ex);
+			}
 		});
 
 		await _next(context);
 	}
 
-	private Dictionary<string, string> ConstructCspDictionary(CspDefinition definition, HttpContext httpContext, string? scriptHashes)
+	private static string BuildCspHeader(Dictionary<string, string> csp)
 	{
-		string? scriptNonce = null;
-		if (httpContext.GetItem<string>(CspConstants.CspManagerScriptNonceSet) == "set")
-		{
-			scriptNonce = _cspService.GetCspScriptNonce(httpContext);
-		}
+		if (csp.Count == 0) return string.Empty;
 
-		string? styleNonce = null;
-		if (httpContext.GetItem<string>(CspConstants.CspManagerStyleNonceSet) == "set")
+		var builder = new StringBuilder(256); // Pre-allocate reasonable size
+		foreach (var kvp in csp)
 		{
-			styleNonce = _cspService.GetCspStyleNonce(httpContext);
+			if (builder.Length > 0) builder.Append(';');
+			builder.Append(kvp.Key);
+			if (!string.IsNullOrEmpty(kvp.Value))
+			{
+				builder.Append(' ').Append(kvp.Value);
+			}
 		}
+		return builder.ToString();
+	}
 
-		var csp = definition.Sources
-		.SelectMany(c => c.Directives.Select(d => new { Directive = d, c.Source }))
-		.GroupBy(x => x.Directive)
-		.ToDictionary(g => g.Key, g => string.Join(" ", g.Select(x => x.Source)));
+	private Dictionary<string, string> ConstructCspDictionary(CspDefinition definition, HttpContext httpContext)
+	{
+		var csp = new Dictionary<string, string>(definition.Sources.Count);
+
+		foreach (var source in definition.Sources)
+		{
+			foreach (var directive in source.Directives)
+			{
+				if (!csp.TryGetValue(directive, out var existingValue))
+				{
+					csp[directive] = source.Source;
+				}
+				else if (!existingValue.Contains(source.Source))
+				{
+					csp[directive] = $"{existingValue} {source.Source}";
+				}
+			}
+		}
 
 		if (!string.IsNullOrWhiteSpace(definition.ReportingDirective) && !string.IsNullOrWhiteSpace(definition.ReportUri))
 		{
 			csp.TryAdd(definition.ReportingDirective, definition.ReportUri);
 		}
 
-		if (!string.IsNullOrWhiteSpace(scriptNonce) && csp.TryGetValue(CspConstants.Directives.ScriptSource, out var scriptSrc))
+		if (definition.UpgradeInsecureRequests)
 		{
-			scriptSrc += $" {scriptHashes} 'nonce-{scriptNonce}'";
-			csp[CspConstants.Directives.ScriptSource] = scriptSrc;
+			csp.TryAdd(Constants.Directives.UpgradeInsecureRequests, "");
 		}
 
-		if (!string.IsNullOrWhiteSpace(styleNonce) && csp.TryGetValue(CspConstants.Directives.StyleSource, out var styleSrc))
+		var scriptNonceSet = httpContext.GetItem<bool>(Constants.TagHelper.CspManagerScriptNonceSet) == true;
+		var styleNonceSet = httpContext.GetItem<bool>(Constants.TagHelper.CspManagerStyleNonceSet) == true;
+
+		if (scriptNonceSet || styleNonceSet)
 		{
-			styleSrc += $" 'nonce-{styleNonce}'";
-			csp[CspConstants.Directives.StyleSource] = styleSrc;
+			var nonce = _cspService.GetOrCreateCspNonce(httpContext);
+			if (scriptNonceSet) AddNonceToDirective(csp, Constants.Directives.ScriptSource, nonce);
+			if (styleNonceSet) AddNonceToDirective(csp, Constants.Directives.StyleSource, nonce);
 		}
 
 		return csp;
 	}
 
-	private async Task<string?> GetScriptHashes(CspDefinition definition, HttpContext httpContext)
+	private static void AddNonceToDirective(Dictionary<string, string> csp, string directive, string nonce)
 	{
-		// Script hashes - add as a separate directive for clarity
-		if (httpContext.GetItem<string>(CspConstants.CspManagerScriptHashSet) == "set")
+		if (!string.IsNullOrWhiteSpace(nonce) && csp.TryGetValue(directive, out var existingValue))
 		{
-			var hashes = await _scriptItemService.GetCachedScriptItemsDictionary();
-			if (hashes != null)
-			{
-				return string.Join(' ', hashes.Select(x => $"'{x.Value}'"));
-			}
+			csp[directive] = $"{existingValue} 'nonce-{nonce}'";
 		}
-		return null;
 	}
 }

@@ -1,29 +1,27 @@
-﻿namespace Umbraco.Community.CSPManager.Migrations;
-
+﻿using System.Diagnostics.CodeAnalysis;
 using NPoco;
-using Umbraco.Cms.Core.Configuration;
 using Umbraco.Cms.Infrastructure.Migrations;
 using Umbraco.Cms.Infrastructure.Persistence.DatabaseAnnotations;
 using Umbraco.Community.CSPManager.Models;
 
-public sealed class InitialCspManagerMigration : MigrationBase
+namespace Umbraco.Community.CSPManager.Migrations;
+
+public sealed class InitialCspManagerMigration : AsyncMigrationBase
 {
 	public const string MigrationKey = "csp-manager-init";
-	private readonly IUmbracoVersion UmbracoVersion;
 
-	public InitialCspManagerMigration(IMigrationContext context, IUmbracoVersion umbracoVersion) : base(context)
+	public InitialCspManagerMigration(IMigrationContext context) : base(context)
 	{
-		UmbracoVersion = umbracoVersion;
 	}
 
-	protected override void Migrate()
+	protected override async Task MigrateAsync()
 	{
 		if (!TableExists(nameof(CspDefinition)))
 		{
 			Create.Table<CspDefinitionSchema>().Do();
-			Context.Database.Insert(nameof(CspDefinition), nameof(CspDefinition.Id), false, new
+			await Context.Database.InsertAsync<CspDefinition>(new()
 			{
-				Id = CspConstants.DefaultBackofficeId,
+				Id = Constants.DefaultBackofficeId,
 				IsBackOffice = true,
 				Enabled = false,
 				ReportOnly = false
@@ -33,21 +31,20 @@ public sealed class InitialCspManagerMigration : MigrationBase
 		if (!TableExists(nameof(CspDefinitionSource)))
 		{
 			Create.Table<CspDefinitionSourceSchema>().Do();
-			foreach (var source in CspConstants.DefaultBackOfficeCsp)
-			{
-				if (UmbracoVersion.Version.Major >= 13 && source.Source == "www.gravatar.com")
-				{
-					continue;
-				}
 
-				Context.Database.Insert(nameof(CspDefinitionSource), $"{nameof(CspDefinitionSource.DefinitionId)},{nameof(CspDefinitionSource.Source)}", false, source);
-			}
+			await Context.Database.InsertBulkAsync<CspDefinitionSource>(
+				Constants.DefaultBackOfficeCsp.Select(source =>
+				{
+					source.DefinitionId = Constants.DefaultBackofficeId;
+					return source;
+				}));
 		}
 	}
 
+	[ExcludeFromCodeCoverage(Justification = "Migration model so not accessed directly.")]
 	[TableName((nameof(CspDefinition)))]
 	[PrimaryKey(nameof(Id), AutoIncrement = false)]
-	private class CspDefinitionSchema
+	private sealed class CspDefinitionSchema
 	{
 		[PrimaryKeyColumn(AutoIncrement = false)]
 		public Guid Id { get; set; }
@@ -58,16 +55,28 @@ public sealed class InitialCspManagerMigration : MigrationBase
 
 		public bool IsBackOffice { get; set; }
 
+
+		[Length(500)]
+		[NullSetting(NullSetting = NullSettings.Null)]
+		public string? ReportingDirective { get; set; }
+
+		[Length(500)]
+		[NullSetting(NullSetting = NullSettings.Null)]
+		public string? ReportUri { get; set; }
+
+		public bool UpgradeInsecureRequests { get; set; }
+
 		[ResultColumn]
 		[Reference(ReferenceType.Many,
 			ColumnName = nameof(Id),
 			ReferenceMemberName = nameof(CspDefinitionSource.DefinitionId))]
-		public List<CspDefinitionSource> Sources { get; set; } = new();
+		public List<CspDefinitionSource> Sources { get; set; } = [];
 	}
 
+	[ExcludeFromCodeCoverage(Justification = "Migration model so not accessed directly.")]
 	[TableName((nameof(CspDefinitionSource)))]
-	[PrimaryKey(new[] { nameof(DefinitionId), nameof(Source) })]
-	private class CspDefinitionSourceSchema
+	[PrimaryKey([nameof(DefinitionId), nameof(Source)])]
+	private sealed class CspDefinitionSourceSchema
 	{
 		[PrimaryKeyColumn(
 			AutoIncrement = false,
@@ -82,6 +91,6 @@ public sealed class InitialCspManagerMigration : MigrationBase
 
 		[SerializedColumn(Name = nameof(Directives))]
 		[SpecialDbType(SpecialDbTypes.NVARCHARMAX)]
-		public List<string> Directives { get; set; } = new();
+		public List<string> Directives { get; set; } = [];
 	}
 }
