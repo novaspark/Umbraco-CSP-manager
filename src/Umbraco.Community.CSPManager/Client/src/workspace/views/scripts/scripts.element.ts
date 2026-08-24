@@ -216,11 +216,11 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 		return html`
 			<uui-table>
 				<uui-table-head>
-					<uui-table-head-cell>Src</uui-table-head-cell>
-					<uui-table-head-cell>Description</uui-table-head-cell>
-					<uui-table-head-cell>Hash</uui-table-head-cell>
-					<uui-table-head-cell>Sync on startup</uui-table-head-cell>
-					<uui-table-head-cell></uui-table-head-cell>
+					<uui-table-head-cell style="width:25%;">Src</uui-table-head-cell>
+					<uui-table-head-cell style="width:20%;">Description</uui-table-head-cell>
+					<uui-table-head-cell style="width:25%;">Hash</uui-table-head-cell>
+					<uui-table-head-cell style="width:15%;">Sync on startup</uui-table-head-cell>
+					<uui-table-head-cell style="width:15%;"></uui-table-head-cell>
 				</uui-table-head>
 				${this._items.map((item) => this.#renderRow(item))}
 			</uui-table>
@@ -295,6 +295,11 @@ export class UmbCspScriptsViewElement extends UmbLitElement {
 
 			.src {
 				font-family: var(--uui-font-family-monospace);
+				word-break: break-all;
+			}
+
+			uui-table-cell {
+				vertical-align: top;
 			}
 
 			.hash {
