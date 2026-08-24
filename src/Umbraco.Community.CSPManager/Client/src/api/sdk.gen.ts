@@ -2,65 +2,173 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetUmbracoCspApiV1DefinitionsData, GetUmbracoCspApiV1DefinitionsErrors, GetUmbracoCspApiV1DefinitionsResponses, GetUmbracoCspApiV1DirectivesData, GetUmbracoCspApiV1DirectivesErrors, GetUmbracoCspApiV1DirectivesResponses, PostUmbracoCspApiV1DefinitionsSaveData, PostUmbracoCspApiV1DefinitionsSaveErrors, PostUmbracoCspApiV1DefinitionsSaveResponses } from './types.gen';
+import type {
+	DeleteUmbracoCspApiV1ScriptItemsByIdData,
+	DeleteUmbracoCspApiV1ScriptItemsByIdErrors,
+	DeleteUmbracoCspApiV1ScriptItemsByIdResponses,
+	GetUmbracoCspApiV1DefinitionsData,
+	GetUmbracoCspApiV1DefinitionsErrors,
+	GetUmbracoCspApiV1DefinitionsResponses,
+	GetUmbracoCspApiV1DirectivesData,
+	GetUmbracoCspApiV1DirectivesErrors,
+	GetUmbracoCspApiV1DirectivesResponses,
+	GetUmbracoCspApiV1ScriptItemsByIdData,
+	GetUmbracoCspApiV1ScriptItemsByIdErrors,
+	GetUmbracoCspApiV1ScriptItemsByIdResponses,
+	GetUmbracoCspApiV1ScriptItemsData,
+	GetUmbracoCspApiV1ScriptItemsErrors,
+	GetUmbracoCspApiV1ScriptItemsResponses,
+	PostUmbracoCspApiV1DefinitionsSaveData,
+	PostUmbracoCspApiV1DefinitionsSaveErrors,
+	PostUmbracoCspApiV1DefinitionsSaveResponses,
+	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashData,
+	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashErrors,
+	PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashResponses,
+	PostUmbracoCspApiV1ScriptItemsSaveData,
+	PostUmbracoCspApiV1ScriptItemsSaveErrors,
+	PostUmbracoCspApiV1ScriptItemsSaveResponses,
+} from './types.gen';
 
-export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
-    /**
-     * You can provide a client instance returned by `createClient()` instead of
-     * individual options. This might be also useful if you want to implement a
-     * custom client.
-     */
-    client?: Client;
-    /**
-     * You can pass arbitrary values through the `meta` object. This can be
-     * used to access values that aren't defined as part of the SDK function.
-     */
-    meta?: Record<string, unknown>;
+export type Options<
+	TData extends TDataShape = TDataShape,
+	ThrowOnError extends boolean = boolean,
+	TResponse = unknown,
+> = Options2<TData, ThrowOnError, TResponse> & {
+	/**
+	 * You can provide a client instance returned by `createClient()` instead of
+	 * individual options. This might be also useful if you want to implement a
+	 * custom client.
+	 */
+	client?: Client;
+	/**
+	 * You can pass arbitrary values through the `meta` object. This can be
+	 * used to access values that aren't defined as part of the SDK function.
+	 */
+	meta?: Record<string, unknown>;
 };
 
 export class Definitions {
-    public static getUmbracoCspApiV1Definitions<ThrowOnError extends boolean = true>(options?: Options<GetUmbracoCspApiV1DefinitionsData, ThrowOnError>) {
-        return (options?.client ?? client).get<GetUmbracoCspApiV1DefinitionsResponses, GetUmbracoCspApiV1DefinitionsErrors, ThrowOnError>({
-            security: [
-                {
-                    scheme: 'bearer',
-                    type: 'http'
-                }
-            ],
-            url: '/umbraco/csp/api/v1/Definitions',
-            ...options
-        });
-    }
-    
-    public static postUmbracoCspApiV1DefinitionsSave<ThrowOnError extends boolean = true>(options?: Options<PostUmbracoCspApiV1DefinitionsSaveData, ThrowOnError>) {
-        return (options?.client ?? client).post<PostUmbracoCspApiV1DefinitionsSaveResponses, PostUmbracoCspApiV1DefinitionsSaveErrors, ThrowOnError>({
-            security: [
-                {
-                    scheme: 'bearer',
-                    type: 'http'
-                }
-            ],
-            url: '/umbraco/csp/api/v1/Definitions/save',
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options?.headers
-            }
-        });
-    }
+	public static getUmbracoCspApiV1Definitions<ThrowOnError extends boolean = true>(
+		options?: Options<GetUmbracoCspApiV1DefinitionsData, ThrowOnError>,
+	) {
+		return (options?.client ?? client).get<
+			GetUmbracoCspApiV1DefinitionsResponses,
+			GetUmbracoCspApiV1DefinitionsErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/Definitions',
+			...options,
+		});
+	}
+
+	public static postUmbracoCspApiV1DefinitionsSave<ThrowOnError extends boolean = true>(
+		options?: Options<PostUmbracoCspApiV1DefinitionsSaveData, ThrowOnError>,
+	) {
+		return (options?.client ?? client).post<
+			PostUmbracoCspApiV1DefinitionsSaveResponses,
+			PostUmbracoCspApiV1DefinitionsSaveErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/Definitions/save',
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				...options?.headers,
+			},
+		});
+	}
 }
 
 export class Directives {
-    public static getUmbracoCspApiV1Directives<ThrowOnError extends boolean = true>(options?: Options<GetUmbracoCspApiV1DirectivesData, ThrowOnError>) {
-        return (options?.client ?? client).get<GetUmbracoCspApiV1DirectivesResponses, GetUmbracoCspApiV1DirectivesErrors, ThrowOnError>({
-            security: [
-                {
-                    scheme: 'bearer',
-                    type: 'http'
-                }
-            ],
-            url: '/umbraco/csp/api/v1/Directives',
-            ...options
-        });
-    }
+	public static getUmbracoCspApiV1Directives<ThrowOnError extends boolean = true>(
+		options?: Options<GetUmbracoCspApiV1DirectivesData, ThrowOnError>,
+	) {
+		return (options?.client ?? client).get<
+			GetUmbracoCspApiV1DirectivesResponses,
+			GetUmbracoCspApiV1DirectivesErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/Directives',
+			...options,
+		});
+	}
+}
+
+export class ScriptItems {
+	public static getUmbracoCspApiV1ScriptItems<ThrowOnError extends boolean = true>(
+		options?: Options<GetUmbracoCspApiV1ScriptItemsData, ThrowOnError>,
+	) {
+		return (options?.client ?? client).get<
+			GetUmbracoCspApiV1ScriptItemsResponses,
+			GetUmbracoCspApiV1ScriptItemsErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems',
+			...options,
+		});
+	}
+
+	public static deleteUmbracoCspApiV1ScriptItemsById<ThrowOnError extends boolean = true>(
+		options: Options<DeleteUmbracoCspApiV1ScriptItemsByIdData, ThrowOnError>,
+	) {
+		return (options.client ?? client).delete<
+			DeleteUmbracoCspApiV1ScriptItemsByIdResponses,
+			DeleteUmbracoCspApiV1ScriptItemsByIdErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems/{id}',
+			...options,
+		});
+	}
+
+	public static getUmbracoCspApiV1ScriptItemsById<ThrowOnError extends boolean = true>(
+		options: Options<GetUmbracoCspApiV1ScriptItemsByIdData, ThrowOnError>,
+	) {
+		return (options.client ?? client).get<
+			GetUmbracoCspApiV1ScriptItemsByIdResponses,
+			GetUmbracoCspApiV1ScriptItemsByIdErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems/{id}',
+			...options,
+		});
+	}
+
+	public static postUmbracoCspApiV1ScriptItemsByIdRegenerateHash<ThrowOnError extends boolean = true>(
+		options: Options<PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashData, ThrowOnError>,
+	) {
+		return (options.client ?? client).post<
+			PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashResponses,
+			PostUmbracoCspApiV1ScriptItemsByIdRegenerateHashErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems/{id}/regenerate-hash',
+			...options,
+		});
+	}
+
+	public static postUmbracoCspApiV1ScriptItemsSave<ThrowOnError extends boolean = true>(
+		options?: Options<PostUmbracoCspApiV1ScriptItemsSaveData, ThrowOnError>,
+	) {
+		return (options?.client ?? client).post<
+			PostUmbracoCspApiV1ScriptItemsSaveResponses,
+			PostUmbracoCspApiV1ScriptItemsSaveErrors,
+			ThrowOnError
+		>({
+			security: [{ scheme: 'bearer', type: 'http' }],
+			url: '/umbraco/csp/api/v1/ScriptItems/save',
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				...options?.headers,
+			},
+		});
+	}
 }
