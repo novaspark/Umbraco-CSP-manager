@@ -13,4 +13,10 @@ export const manifests: Array<UmbExtensionManifest> = [
 		name: 'CSP Directives Repository',
 		api: () => import('./csp-directives.repository.js'),
 	},
+	{
+		type: 'repository',
+		alias: `${CspConstants.alias}.Repository.CspScriptItem`,
+		name: 'CSP Script Item Repository',
+		api: () => import('./csp-script-item.repository.js'),
+	},
 ];

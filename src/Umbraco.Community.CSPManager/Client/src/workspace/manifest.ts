@@ -65,4 +65,22 @@ export const manifests: Array<UmbExtensionManifest> = [
 			},
 		],
 	},
+	{
+		type: 'workspaceView',
+		alias: `${CspConstants.workspace.alias}View.Scripts`,
+		name: 'CSP Scripts View',
+		js: () => import('./views/scripts/scripts.element.js'),
+		weight: 40,
+		meta: {
+			label: 'Scripts',
+			pathname: 'scripts',
+			icon: CspConstants.icons.scripts,
+		},
+		conditions: [
+			{
+				alias: CspConstants.umbraco.conditions.workspaceAlias,
+				match: CspConstants.workspace.alias,
+			},
+		],
+	},
 ];

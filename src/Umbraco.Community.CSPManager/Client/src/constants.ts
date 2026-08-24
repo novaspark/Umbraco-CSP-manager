@@ -33,6 +33,7 @@ export const CspConstants = {
 		sources: 'icon-list',
 		settings: 'icon-settings',
 		evaluate: 'icon-locate',
+		scripts: 'icon-script',
 	},
 	weights: {
 		high: 100,
