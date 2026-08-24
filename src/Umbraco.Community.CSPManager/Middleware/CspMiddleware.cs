@@ -33,6 +33,7 @@ public class CspMiddleware
 	private readonly RequestDelegate _next;
 	private readonly IRuntimeState _runtimeState;
 	private readonly ICspService _cspService;
+	private readonly IScriptItemService _scriptItemService;
 	private readonly IEventAggregator _eventAggregator;
 	private readonly ILogger<CspMiddleware> _logger;
 	private CspManagerOptions _cspOptions;
@@ -43,6 +44,7 @@ public class CspMiddleware
 	/// <param name="next">The next middleware in the pipeline.</param>
 	/// <param name="runtimeState">The Umbraco runtime state service.</param>
 	/// <param name="cspService">The CSP service for retrieving definitions.</param>
+	/// <param name="scriptItemService">The script item service for retrieving known script hashes.</param>
 	/// <param name="eventAggregator">The event aggregator for publishing notifications.</param>
 	/// <param name="cspOptions">The CSP Manager configuration options.</param>
 	/// <param name="logger">The logger for diagnostic output.</param>
@@ -50,6 +52,7 @@ public class CspMiddleware
 		RequestDelegate next,
 		IRuntimeState runtimeState,
 		ICspService cspService,
+		IScriptItemService scriptItemService,
 		IEventAggregator eventAggregator,
 		IOptionsMonitor<CspManagerOptions> cspOptions,
 		ILogger<CspMiddleware> logger)
@@ -57,6 +60,7 @@ public class CspMiddleware
 		_next = next;
 		_runtimeState = runtimeState;
 		_cspService = cspService;
+		_scriptItemService = scriptItemService;
 		_eventAggregator = eventAggregator;
 		_logger = logger;
 
@@ -119,7 +123,7 @@ public class CspMiddleware
 					return;
 				}
 
-				var csp = ConstructCspDictionary(definition, context);
+				var csp = await ConstructCspDictionaryAsync(definition, context);
 				var cspValue = BuildCspHeader(csp);
 
 				if (!string.IsNullOrWhiteSpace(cspValue))
@@ -168,7 +172,7 @@ public class CspMiddleware
 		return builder.ToString();
 	}
 
-	private Dictionary<string, string> ConstructCspDictionary(CspDefinition definition, HttpContext httpContext)
+	private async Task<Dictionary<string, string>> ConstructCspDictionaryAsync(CspDefinition definition, HttpContext httpContext)
 	{
 		var csp = new Dictionary<string, string>(definition.Sources.Count);
 
@@ -207,6 +211,17 @@ public class CspMiddleware
 			if (styleNonceSet) AddNonceToDirective(csp, Constants.Directives.StyleSource, nonce);
 		}
 
+		var scriptHashSet = httpContext.GetItem<bool>(Constants.TagHelper.CspManagerScriptHashSet) == true;
+		if (scriptHashSet)
+		{
+			// Not the caller's token: shared with every request waiting on the same runtime-cache entry.
+			var hashes = await _scriptItemService.GetCachedScriptHashesAsync(CancellationToken.None);
+			if (hashes.Count > 0)
+			{
+				AddHashesToDirective(csp, Constants.Directives.ScriptSource, hashes);
+			}
+		}
+
 		return csp;
 	}
 
@@ -216,5 +231,15 @@ public class CspMiddleware
 		{
 			csp[directive] = $"{existingValue} 'nonce-{nonce}'";
 		}
+	}
+
+	private static void AddHashesToDirective(Dictionary<string, string> csp, string directive, IReadOnlyCollection<string> hashes)
+	{
+		if (!csp.TryGetValue(directive, out var existingValue))
+		{
+			return;
+		}
+
+		csp[directive] = $"{existingValue} {string.Join(' ', hashes.Select(h => $"'{h}'"))}";
 	}
 }

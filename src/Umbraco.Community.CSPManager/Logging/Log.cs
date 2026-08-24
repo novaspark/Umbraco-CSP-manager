@@ -114,4 +114,56 @@ internal static partial class Log
 		Level = LogLevel.Debug,
 		Message = "Clearing all CSP caches")]
 	public static partial void ClearingAllCspCaches(ILogger logger);
+
+	// ===========================================
+	// Script Item Events (300-399)
+	// ===========================================
+
+	[LoggerMessage(
+		EventId = 300,
+		Level = LogLevel.Error,
+		Message = "Failed to save script item {ScriptItemId}")]
+	public static partial void ScriptItemSaveFailed(ILogger logger, Guid scriptItemId, Exception ex);
+
+	[LoggerMessage(
+		EventId = 301,
+		Level = LogLevel.Information,
+		Message = "Saved script item {ScriptItemId} ({Src})")]
+	public static partial void ScriptItemSaved(ILogger logger, Guid scriptItemId, string src);
+
+	[LoggerMessage(
+		EventId = 302,
+		Level = LogLevel.Error,
+		Message = "Failed to generate hash for script item {ScriptItemId} ({Src})")]
+	public static partial void ScriptItemHashGenerationFailed(ILogger logger, Guid scriptItemId, string src, Exception ex);
+
+	[LoggerMessage(
+		EventId = 303,
+		Level = LogLevel.Information,
+		Message = "Regenerated hash for script item {ScriptItemId}")]
+	public static partial void ScriptItemHashRegenerated(ILogger logger, Guid scriptItemId);
+
+	[LoggerMessage(
+		EventId = 304,
+		Level = LogLevel.Information,
+		Message = "Deleted script item {ScriptItemId}")]
+	public static partial void ScriptItemDeleted(ILogger logger, Guid scriptItemId);
+
+	[LoggerMessage(
+		EventId = 305,
+		Level = LogLevel.Information,
+		Message = "Synchronising script item hashes on application startup")]
+	public static partial void ScriptItemStartupSyncStarted(ILogger logger);
+
+	[LoggerMessage(
+		EventId = 306,
+		Level = LogLevel.Debug,
+		Message = "Retrieved script items from cache")]
+	public static partial void ScriptItemsRetrievedFromCache(ILogger logger);
+
+	[LoggerMessage(
+		EventId = 307,
+		Level = LogLevel.Debug,
+		Message = "Loading script items from database")]
+	public static partial void LoadingScriptItemsFromDatabase(ILogger logger);
 }

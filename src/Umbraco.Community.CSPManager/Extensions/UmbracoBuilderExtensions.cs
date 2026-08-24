@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Core.Notifications;
 using Umbraco.Cms.Web.Common.ApplicationBuilder;
 using Umbraco.Community.CSPManager.Authorization;
 using Umbraco.Community.CSPManager.Configuration;
@@ -27,6 +28,8 @@ public static class UmbracoBuilderExtensions
 		builder.Services.Configure<CspManagerOptions>(builder.Config.GetSection(Constants.OptionsName));
 
 		builder.Services.AddTransient<ICspService, CspService>();
+		builder.Services.AddTransient<IScriptItemService, ScriptItemService>();
+		builder.Services.AddHttpClient(nameof(ScriptItemService));
 
 		builder.Services.Configure<UmbracoPipelineOptions>(options =>
 		{
@@ -39,6 +42,7 @@ public static class UmbracoBuilderExtensions
 		});
 
 		builder.AddNotificationHandler<CspSavedNotification, CspSavedNotificationHandler>();
+		builder.AddNotificationAsyncHandler<UmbracoApplicationStartedNotification, CspApplicationStartedNotificationHandler>();
 
 		builder.Services.AddSingleton<IAuthorizationHandler, CspManagerAllowedApplicationHandler>();
 		builder.Services.AddAuthorizationBuilder().AddPolicy(Constants.AuthorizationPolicies.SectionAccess,

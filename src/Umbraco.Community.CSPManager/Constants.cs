@@ -43,6 +43,8 @@ public static partial class Constants
 		public const string CspManagerScriptNonceSet = "CspManagerScriptNonceSet";
 
 		public const string CspManagerStyleNonceSet = "CspManagerStyleNonceSet";
+
+		public const string CspManagerScriptHashSet = "CspManagerScriptHashSet";
 	}
 
 	public static class AuthorizationPolicies
