@@ -31,6 +31,8 @@ public class CspMiddlewareTests
 
 	private ICspService _cspService;
 
+	private IScriptItemService _scriptItemService;
+
 	private IEventAggregator _eventAggregator;
 	private static Dictionary<string, string> InMemoryConfiguration => [];
 
@@ -44,6 +46,7 @@ public class CspMiddlewareTests
 		InMemoryConfiguration[
 			UmbConstants.Configuration.ConfigUnattended + ":" + nameof(UnattendedSettings.InstallUnattended)] = "true";
 		_cspService = Mock.Of<ICspService>();
+		_scriptItemService = Mock.Of<IScriptItemService>();
 		_eventAggregator = Mock.Of<IEventAggregator>();
 		_host = BuildTestHost();
 	}
@@ -63,6 +66,7 @@ public class CspMiddlewareTests
 					.ConfigureServices(services =>
 					{
 						services.AddSingleton(_ => _cspService);
+						services.AddSingleton(_ => _scriptItemService);
 						services.AddSingleton(_ => _eventAggregator);
 						services.AddSingleton(_ => runtimeState);
 						services.AddSingleton(_ => runtime);

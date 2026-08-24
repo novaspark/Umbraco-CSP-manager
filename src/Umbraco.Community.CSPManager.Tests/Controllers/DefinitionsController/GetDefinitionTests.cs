@@ -48,6 +48,7 @@ internal class GetDefinitionTests : CspManagementApiTest<DefinitionsControllerTy
 			  "reportingDirective": null,
 			  "reportUri": null,
 			  "upgradeInsecureRequests": false,
+			  "excludePaths": null,
 			  "sources": [
 			    {
 			      "definitionId": "00000000-0000-0000-0000-000000000000",
