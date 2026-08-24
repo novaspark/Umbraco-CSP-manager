@@ -12,6 +12,7 @@ export type CspApiDefinition = {
 	reportingDirective?: string | null;
 	reportUri?: string | null;
 	upgradeInsecureRequests: boolean;
+	excludePaths?: string | null;
 	sources: Array<CspApiDefinitionSource>;
 };
 

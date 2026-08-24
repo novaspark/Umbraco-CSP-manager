@@ -148,6 +148,30 @@ export class UmbCspSettingsViewElement extends UmbLitElement {
 							</uui-input>
 						</div>
 					</uui-form-layout-item>
+
+					<uui-form-layout-item>
+						<uui-label slot="label">Exclude Paths</uui-label>
+						<span slot="description">
+							Request paths that should never receive a CSP header, one per line or comma-separated. Paths must
+							match exactly (case-insensitive).
+						</span>
+						<div class="setting-control">
+							<uui-textarea
+								label="Exclude Paths"
+								placeholder="/umbraco/swagger/index.html"
+								.value=${(this._workspaceState.definition.excludePaths || '').split(',').join('\n')}
+								@change=${(e: Event) =>
+									this._updateDefinitionSetting(
+										'excludePaths',
+										(e.target as HTMLTextAreaElement).value
+											.split('\n')
+											.map((p) => p.trim())
+											.filter((p) => p.length > 0)
+											.join(',')
+									)}>
+							</uui-textarea>
+						</div>
+					</uui-form-layout-item>
 				</div>
 
 				<div class="settings-info">
