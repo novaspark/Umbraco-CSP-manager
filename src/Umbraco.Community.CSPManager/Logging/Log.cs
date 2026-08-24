@@ -65,6 +65,12 @@ internal static partial class Log
 		Message = "No CSP definition was returned for {Context}; no CSP header was applied")]
 	public static partial void CspDefinitionNotFound(ILogger logger, string context);
 
+	[LoggerMessage(
+		EventId = 10,
+		Level = LogLevel.Debug,
+		Message = "CSP header skipped for {Path}: matches an excluded path on {DefinitionId}")]
+	public static partial void CspPathExcluded(ILogger logger, PathString path, Guid definitionId);
+
 	// ===========================================
 	// Service Events (100-199)
 	// ===========================================

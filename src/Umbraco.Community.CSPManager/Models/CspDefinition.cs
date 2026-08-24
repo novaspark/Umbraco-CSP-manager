@@ -34,6 +34,14 @@ public class CspDefinition
 
 	public bool UpgradeInsecureRequests { get; set; }
 
+	/// <summary>
+	/// A comma-separated list of request paths to skip entirely - no CSP header is added to a
+	/// response whose path exactly matches one of these (case-insensitive).
+	/// </summary>
+	[SpecialDbType(SpecialDbTypes.NVARCHARMAX)]
+	[NullSetting(NullSetting = NullSettings.Null)]
+	public string? ExcludePaths { get; set; }
+
 	[ResultColumn]
 	[Reference(ReferenceType.Many,
 		ColumnName = nameof(Id),

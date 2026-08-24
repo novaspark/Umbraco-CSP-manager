@@ -51,6 +51,12 @@ public sealed class CspApiDefinition : IValidatableObject
 	public bool UpgradeInsecureRequests { get; set; }
 
 	/// <summary>
+	/// Gets or sets a comma-separated list of request paths to skip entirely - no CSP header is
+	/// added to a response whose path exactly matches one of these (case-insensitive).
+	/// </summary>
+	public string? ExcludePaths { get; set; }
+
+	/// <summary>
 	/// Gets or sets the list of CSP sources and their associated directives.
 	/// </summary>
 	public List<CspApiDefinitionSource> Sources { get; set; } = [];
@@ -201,6 +207,7 @@ public sealed class CspApiDefinition : IValidatableObject
 			IsBackOffice = definition.IsBackOffice,
 			ReportOnly = definition.ReportOnly,
 			ReportUri = definition.ReportUri,
+			ExcludePaths = definition.ExcludePaths,
 			Sources = definition.Sources.ConvertAll(CspApiDefinitionSource.FromCspDefinitionSource),
 		};
 
@@ -216,6 +223,7 @@ public sealed class CspApiDefinition : IValidatableObject
 			IsBackOffice = IsBackOffice,
 			ReportingDirective = ReportingDirective,
 			ReportUri = ReportUri,
+			ExcludePaths = ExcludePaths,
 			Sources = Sources.ConvertAll(CspApiDefinitionSource.ToCspDefinitionSource)
 		};
 }

@@ -66,6 +66,10 @@ public sealed class InitialCspManagerMigration : AsyncMigrationBase
 
 		public bool UpgradeInsecureRequests { get; set; }
 
+		[SpecialDbType(SpecialDbTypes.NVARCHARMAX)]
+		[NullSetting(NullSetting = NullSettings.Null)]
+		public string? ExcludePaths { get; set; }
+
 		[ResultColumn]
 		[Reference(ReferenceType.Many,
 			ColumnName = nameof(Id),

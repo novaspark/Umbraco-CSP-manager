@@ -123,6 +123,12 @@ public class CspMiddleware
 					return;
 				}
 
+				if (IsExcludedPath(definition.ExcludePaths, context.Request.Path))
+				{
+					Log.CspPathExcluded(_logger, context.Request.Path, definition.Id);
+					return;
+				}
+
 				var csp = await ConstructCspDictionaryAsync(definition, context);
 				var cspValue = BuildCspHeader(csp);
 
@@ -241,5 +247,18 @@ public class CspMiddleware
 		}
 
 		csp[directive] = $"{existingValue} {string.Join(' ', hashes.Select(h => $"'{h}'"))}";
+	}
+
+	private static bool IsExcludedPath(string? excludePaths, PathString requestPath)
+	{
+		if (string.IsNullOrWhiteSpace(excludePaths))
+		{
+			return false;
+		}
+
+		var path = requestPath.ToString();
+		return excludePaths
+			.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			.Any(excluded => path.Equals(excluded, StringComparison.OrdinalIgnoreCase));
 	}
 }
