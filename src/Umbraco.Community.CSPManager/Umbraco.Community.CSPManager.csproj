@@ -8,6 +8,9 @@
     <EnableDefaultContentItems>true</EnableDefaultContentItems>
   </PropertyGroup>
   <PropertyGroup>
+    <!-- novaspark fork: distinct from the real 17.0.5 on nuget.org so an exact-version pin
+         always resolves to this build from the local feed, never the upstream package. -->
+    <Version>17.0.5-novaspark.1</Version>
     <Product>Umbraco.Community.CSPManager</Product>
     <PackageId>Umbraco.Community.CSPManager</PackageId>
     <Title>Umbraco.Community.CSPManager</Title>
